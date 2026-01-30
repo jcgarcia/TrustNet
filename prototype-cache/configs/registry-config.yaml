@@ -1,0 +1,19 @@
+# TrustNet Registry Configuration Template
+
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/trustnet-registry
+http:
+  addr: 0.0.0.0:8000
+  headers:
+    X-Content-Type-Options:
+      - nosniff
+    X-Frame-Options:
+      - DENY
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
