@@ -1,4 +1,0 @@
-6a63fef0e050146f275bf02a0896badfe77c11b6f05499bb647e7bd613a45a10  /tmp/trustnet-cache/go/go1.22.0.linux-arm64.tar.gz
-f2e637617c511ef0e77aa280ecb770dab47e8792f5f3adce3b8651c59f7ebc35  /tmp/trustnet-cache/configs/doas.conf
-3864d477ada03330556376f6db396c97f345ac34b661d4c4b9dff70d5eb9c4df  /tmp/trustnet-cache/configs/registry-config.yaml
-8e0113eb849ad171838199fa3f7a036adc7f9e1171121bf8c619d5fb7b9074fc  /tmp/trustnet-cache/configs/tendermint-config.toml
