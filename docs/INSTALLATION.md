@@ -61,23 +61,80 @@ After installation, start the VMs:
 ~/vms/trustnet-registry/start-trustnet-registry.sh
 ```
 
-The VMs will start in daemon mode and listen on:
-- **Node**: localhost:2222 (SSH)
-- **Registry**: localhost:2223 (SSH)
+The VMs will start in daemon mode with:
+- **Node**: IPv6 fd10:1234::1 (port 22 SSH), localhost:3222 (testing)
+- **Registry**: IPv6 fd10:1234::2 (port 22 SSH), localhost:3223 (testing), HTTPS on 8053
 
 ## Accessing the VMs
 
-SSH into the VMs:
+### Preferred: Direct IPv6 ULA Access
 
 ```bash
-# Node VM
-ssh -p 2222 warden@localhost
+# Node VM (via IPv6 - recommended)
+ssh -6 warden@fd10:1234::1
 
-# Registry VM
-ssh -p 2223 keeper@localhost
+# Registry VM (via IPv6 - recommended)
+ssh -6 keeper@fd10:1234::2
 ```
 
-## Verifying Services
+### Fallback: Localhost Testing Access
+
+```bash
+# Node VM (testing)
+ssh -p 3222 warden@127.0.0.1
+
+# Registry VM (testing)
+ssh -p 3223 keeper@127.0.0.1
+```
+
+## HTTPS & Security Configuration
+
+### Let's Encrypt Certificates (Automatic)
+
+The registry uses **Caddy** reverse proxy with automatic Let's Encrypt certificate management:
+
+```bash
+# SSH into registry VM
+ssh -6 keeper@fd10:1234::2
+
+# Check certificate status
+ls -la /etc/caddy/certs/
+
+# View Caddy logs
+journalctl -u caddy -f
+```
+
+**Features**:
+- ✅ Automatic certificate renewal (90 days before expiry)
+- ✅ HTTPS enforced on port 8053
+- ✅ HTTP → HTTPS redirect
+- ✅ No self-signed warnings
+- ✅ Valid for domain `registry.trustnet.local`
+
+### Localhost Testing with Self-Signed Fallback
+
+For IPv4-only testing, use hostname verification bypass:
+
+```bash
+# Access registry via localhost (testing)
+curl -k -H 'Host: registry.trustnet.local' https://localhost:8053/health | jq .
+
+# Or import CA certificate
+ssh -6 keeper@fd10:1234::2 'cat /etc/caddy/certs/registry-ca.crt' > /tmp/registry-ca.crt
+curl --cacert /tmp/registry-ca.crt https://registry.trustnet.local:8053/health | jq .
+```
+
+### Tendermint RPC HTTPS
+
+Tendermint RPC also uses HTTPS via Caddy frontend:
+
+```bash
+# Query RPC via IPv6 HTTPS
+curl -k https://[fd10:1234::1]:26657/status | jq .
+
+# Or via hostname
+curl -k https://node.trustnet.local:26657/status | jq .
+```
 
 ```bash
 # Check Tendermint node status

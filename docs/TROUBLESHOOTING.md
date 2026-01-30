@@ -56,9 +56,9 @@ free -h
 # Check for port conflicts
 lsof -i :26657  # Tendermint RPC
 lsof -i :26656  # Tendermint P2P
-lsof -i :8000   # Registry
-lsof -i :2222   # SSH node
-lsof -i :2223   # SSH registry
+lsof -i :8053   # Registry HTTPS
+lsof -i :3222   # SSH node (localhost)
+lsof -i :3223   # SSH registry (localhost)
 
 # Kill conflicting process if needed
 kill -9 <PID>
@@ -84,18 +84,18 @@ ip -6 addr show
 ping6 fd10:1234::1
 
 # Check VM's network configuration
-ssh -p 2222 root@127.0.0.1 'ip -6 addr show'
+ssh -6 warden@fd10:1234::1 'ip -6 addr show'
 ```
 
 ---
 
-#### Error: "Connection refused on port 26657"
-**Cause**: Tendermint service not running or port not bound
+#### Error: "Connection refused on port 26657" or "certificate verify failed"
+**Cause**: Tendermint service not running, port not bound, or HTTPS certificate issue
 
 **Solution**:
 ```bash
-# SSH into node
-ssh -p 2222 root@127.0.0.1
+# SSH into node (via IPv6)
+ssh -6 warden@fd10:1234::1
 
 # Inside node VM:
 # Check if Tendermint is running
@@ -156,54 +156,138 @@ bash ~/trustnet-setup/install.sh --setup-ssh
 
 ### Registry Issues
 
-#### Error: "Registry health check failed"
-**Cause**: Registry service not running or not responding
+#### Error: "Registry health check failed" or "certificate verify failed"
+**Cause**: Registry/Caddy not running, HTTPS certificate issue, or not responding
 
 **Solution**:
 ```bash
-# SSH into registry VM
-ssh -p 2223 -o StrictHostKeyChecking=no root@127.0.0.1
+# SSH into registry VM (via IPv6)
+ssh -6 keeper@fd10:1234::2
 
 # Inside registry VM:
-# Check service status
+# Check Caddy HTTPS status
+systemctl status caddy
+
+# Check registry service
 systemctl status trustnet-registry
 
-# Check if process is running
-ps aux | grep registry
+# Check HTTPS port binding
+ss -tlnp | grep 8053
 
-# Check port binding
-ss -tlnp | grep 8000
+# View Caddy logs
+journalctl -u caddy -f
 
-# View logs
-tail -f /var/lib/trustnet-registry/logs/registry.log
+# Check certificate expiration
+ls -la /etc/caddy/certs/
+openssl x509 -in /etc/caddy/certs/registry.crt -noout -dates
 
-# Restart service
-systemctl restart trustnet-registry
+# Restart Caddy
+systemctl restart caddy
 ```
 
 ---
 
 #### Error: "Unable to push image to registry"
-**Cause**: Registry not running, authentication issue, or storage full
+**Cause**: Registry not running, HTTPS certificate issue, authentication, or storage full
 
 **Solution**:
 ```bash
-# Test registry connectivity
-curl -v http://127.0.0.1:8000/health
+# Test registry HTTPS connectivity (with cert skip for testing)
+curl -k -v https://[fd10:1234::2]:8053/health
+
+# Or via localhost with hostname override
+curl -k -v -H 'Host: registry.trustnet.local' https://localhost:8053/health
 
 # Check registry storage usage
-ssh -p 2223 root@127.0.0.1 'df -h /var/lib/trustnet-registry/'
+ssh -6 keeper@fd10:1234::2 'df -h /var/lib/trustnet-registry/'
 
-# Check authentication (if configured)
-# Registry should accept any user without auth (default)
+# Check Caddy certificate
+ssh -6 keeper@fd10:1234::2 'openssl x509 -in /etc/caddy/certs/registry.crt -text -noout | grep -A2 Validity'
 
-# Try manual push with verbose output
-docker push 127.0.0.1:8000/test-image:latest -v
+# Try manual push with verbose output and cert skip
+docker push [fd10:1234::2]:8053/test-image:latest -v 2>&1 | grep -i https
 ```
 
 ---
 
-### Performance Issues
+### HTTPS & Certificate Issues
+
+#### Error: "Certificate verify failed" or "ERR_SSL_PROTOCOL_ERROR"
+**Cause**: Let's Encrypt certificate not installed, expired, or hostname mismatch
+
+**Solution**:
+```bash
+# Check certificate on registry VM
+ssh -6 keeper@fd10:1234::2
+
+# Inside VM:
+# View certificate details
+openssl x509 -in /etc/caddy/certs/registry.crt -text -noout
+
+# Check certificate validity
+openssl x509 -in /etc/caddy/certs/registry.crt -noout -dates
+
+# Check certificate matches hostname
+openssl x509 -in /etc/caddy/certs/registry.crt -noout -subject -issuer
+
+# Test HTTPS locally in VM
+curl -k https://localhost:8053/health
+```
+
+**For localhost testing**:
+```bash
+# Skip cert verification (development only)
+curl -k https://localhost:8053/health
+
+# Or use hostname from /etc/hosts
+echo "127.0.0.1 registry.trustnet.local" | sudo tee -a /etc/hosts
+curl -k https://registry.trustnet.local:8053/health
+```
+
+#### Error: "Caddy failed to start" or "Certificate renewal failed"
+**Cause**: Let's Encrypt rate limit, DNS issues, or domain not resolvable
+
+**Solution**:
+```bash
+# SSH into registry VM
+ssh -6 keeper@fd10:1234::2
+
+# Check Caddy status
+systemctl status caddy
+
+# View detailed logs
+journalctl -u caddy -n 50
+
+# Test DNS resolution (if using domain names)
+nslookup registry.trustnet.local
+
+# For production: Check Let's Encrypt rate limits
+# Development: Use staging URL to avoid limits
+# In Caddyfile: acme https://acme-staging-v02.api.letsencrypt.org/directory
+
+# Manually trigger certificate renewal (if needed)
+caddy reload
+```
+
+#### Error: "Tendermint RPC HTTPS certificate issue"
+**Cause**: Node RPC also uses Caddy, certificate issue on node VM
+
+**Solution**:
+```bash
+# SSH into node VM
+ssh -6 warden@fd10:1234::1
+
+# Check Caddy status on node
+systemctl status caddy
+
+# View node Caddy logs
+journalctl -u caddy -n 50
+
+# Test RPC locally in VM (skip cert check for testing)
+curl -k https://localhost:26657/status
+```
+
+---
 
 #### Issue: High CPU usage during startup
 **Expected**: Normal for first 5 minutes during Alpine package installation

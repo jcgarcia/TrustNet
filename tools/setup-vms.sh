@@ -387,8 +387,8 @@ main() {
     echo ""
     
     # Generate startup scripts
-    generate_vm_start_script "trustnet-node" "$NODE_RAM" "$NODE_CPUS" "2222"
-    generate_vm_start_script "trustnet-registry" "$REGISTRY_RAM" "$REGISTRY_CPUS" "2223"
+    generate_vm_start_script "trustnet-node" "$NODE_RAM" "$NODE_CPUS" "3222"
+    generate_vm_start_script "trustnet-registry" "$REGISTRY_RAM" "$REGISTRY_CPUS" "3223"
     
     echo ""
     

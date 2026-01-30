@@ -30,8 +30,8 @@ TrustNet consists of two main components running in isolated QEMU VMs:
 
 ### Services
 - **Tendermint**: Consensus engine
-  - RPC: 26657 (queries, transactions)
-  - P2P: 26656 (validator communication)
+  - RPC: 26657 (HTTPS with Let's Encrypt, queries, transactions)
+  - P2P: 26656 (encrypted validator communication)
 
 ### Users
 - `root`: System administration
@@ -54,9 +54,10 @@ TrustNet consists of two main components running in isolated QEMU VMs:
 **Purpose**: Container image registry and distribution
 
 ### Services
-- **Registry**: Go-based registry service
-  - HTTP: 8000 (API and storage)
-  - /health: Health check endpoint
+- **Registry**: Go-based registry service (Caddy HTTPS frontend)
+  - HTTPS: 8053 (API and storage with Let's Encrypt certificate)
+  - /health: Health check endpoint (HTTPS)
+  - Auto-renewal: Caddy manages Let's Encrypt certificate renewal
 
 ### Users
 - `root`: System administration
@@ -92,13 +93,21 @@ Network: fd10:1234::/32
 
 ### Port Mapping
 
-| Service | Internal Port | Host Port | Purpose |
-|---------|---------------|-----------|---------|
-| Node RPC | 26657 | 26657 | Tendermint queries |
-| Node P2P | 26656 | 26656 | Validator communication |
-| Registry API | 8000 | 8000 | Image registry HTTP |
-| SSH (Node) | 22 | 2222 | VM access |
-| SSH (Registry) | 22 | 2223 | VM access |
+#### IPv6 ULA (Primary - Direct Access)
+| Service | IPv6 Address | Port | Protocol | Purpose |
+|---------|-------------|------|----------|----------|
+| Node SSH | fd10:1234::1 | 22 | SSH | VM access |
+| Node RPC | fd10:1234::1 | 26657 | HTTPS | Tendermint queries |
+| Node P2P | fd10:1234::1 | 26656 | Encrypted | Validator communication |
+| Registry SSH | fd10:1234::2 | 22 | SSH | VM access |
+| Registry API | fd10:1234::2 | 8053 | HTTPS | Image registry (Let's Encrypt) |
+
+#### Localhost Testing (IPv4 Fallback)
+| Service | Localhost | Port | Purpose |
+|---------|-----------|------|----------|
+| Node SSH | 127.0.0.1 | 3222 | Forward to fd10:1234::1:22 |
+| Registry SSH | 127.0.0.1 | 3223 | Forward to fd10:1234::2:22 |
+| Registry HTTPS | 127.0.0.1/registry.trustnet.local | 8053 | Forward to fd10:1234::2:8053 |
 
 ## Storage Layout
 

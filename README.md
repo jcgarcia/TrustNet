@@ -81,8 +81,8 @@ TrustNet is a distributed consensus network built on Tendermint, providing:
 | **RAM** | 4GB |
 | **CPUs** | 2 cores |
 | **Network** | IPv6 ULA fd10:1234::2 |
-| **HTTP Port** | 8000 (registry API) |
-| **Health Check** | /health endpoint |
+| **HTTPS Port** | 8053 (registry API, Let's Encrypt certificate) |
+| **Health Check** | /health endpoint (HTTPS) |
 | **User** | keeper (registry operations) |
 
 ### Common Features
@@ -94,18 +94,30 @@ TrustNet is a distributed consensus network built on Tendermint, providing:
 
 ## 🔌 Network Architecture
 
-```
-Network: fd10:1234::/32 (IPv6 ULA)
-├── fd10:1234::1 (trustnet-node)
-│   ├── RPC:  26657 (Tendermint queries)
-│   └── P2P:  26656 (Validator communication)
-└── fd10:1234::2 (trustnet-registry)
-    └── HTTP: 8000 (Registry API)
+### IPv6 ULA (Primary Access - Recommended)
+Direct VM access without port forwarding needed:
 
-SSH Access (via host forwarding):
-├── localhost:2222 → node SSH
-└── localhost:2223 → registry SSH
 ```
+Network: fd10:1234::/32 (IPv6 Unique Local Address)
+├── fd10:1234::1 (trustnet-node)
+│   ├── SSH:   port 22 (direct IPv6 access)
+│   ├── RPC:   port 26657 (HTTPS, Tendermint queries)
+│   └── P2P:   port 26656 (encrypted validator communication)
+└── fd10:1234::2 (trustnet-registry)
+    ├── SSH:   port 22 (direct IPv6 access)
+    └── HTTPS: port 8053 (Let's Encrypt certificate, auto-renewed)
+```
+
+### Localhost Access (Testing Fallback)
+Port forwarding via QEMU for IPv4-only systems:
+
+```
+localhost:3222 ──→ fd10:1234::1:22 (node SSH)
+localhost:3223 ──→ fd10:1234::2:22 (registry SSH)
+localhost:8053 ──→ fd10:1234::2:8053 (registry HTTPS)
+```
+
+**Note**: Registry port 8053 uses HTTPS with Let's Encrypt certificates. For HTTPS connections via localhost, certificates are valid when accessing as `registry.trustnet.local` (configured in /etc/hosts by installer).
 
 ## 🛠️ Using TrustNet
 
@@ -122,44 +134,80 @@ After installation completes:
 sleep 30
 ```
 
+### Access Methods
+
+**Preferred: Direct IPv6 ULA Access** (no port forwarding, standard ports)
+```bash
+# SSH into node VM (via IPv6)
+ssh -6 warden@fd10:1234::1
+
+# SSH into registry VM (via IPv6)
+ssh -6 keeper@fd10:1234::2
+
+# Query Tendermint RPC via HTTPS (IPv6)
+curl -k https://[fd10:1234::1]:26657/status | jq .result.sync_info
+
+# Check Registry HTTPS (IPv6)
+curl -k https://[fd10:1234::2]:8053/health | jq .
+```
+
+**Fallback: Localhost Testing** (for IPv4-only systems, with port forwarding)
+```bash
+# SSH into node VM (localhost)
+ssh -p 3222 warden@127.0.0.1
+
+# SSH into registry VM (localhost)
+ssh -p 3223 keeper@127.0.0.1
+
+# Access Registry HTTPS via localhost
+curl -k https://localhost:8053/health | jq .
+```
+
 ### Verify Installation
 
 ```bash
+# Verify via IPv6 (recommended)
+echo "✓ Testing IPv6 ULA connectivity..."
+ssh -6 warden@fd10:1234::1 'echo "Node online"'
+ssh -6 keeper@fd10:1234::2 'echo "Registry online"'
+
 # Check Tendermint node status
-curl http://localhost:26657/status | jq .
+curl -k https://[fd10:1234::1]:26657/status | jq .result.sync_info
 
 # Check registry health
-curl http://localhost:8000/health | jq .
-
-# SSH into node VM
-ssh -p 2222 warden@127.0.0.1
-
-# SSH into registry VM
-ssh -p 2223 keeper@127.0.0.1
+curl -k https://[fd10:1234::2]:8053/health | jq .
 ```
 
 ### Common Operations
 
-**Push image to registry:**
+**Push image to registry (IPv6 HTTPS):**
 ```bash
-docker tag myapp:latest 127.0.0.1:8000/myapp:latest
-docker push 127.0.0.1:8000/myapp:latest
+# Configure for HTTPS registry
+docker tag myapp:latest [fd10:1234::2]:8053/myapp:latest
+docker push [fd10:1234::2]:8053/myapp:latest
+
+# Or via localhost (testing)
+docker tag myapp:latest registry.trustnet.local:8053/myapp:latest
+docker push registry.trustnet.local:8053/myapp:latest
 ```
 
-**Query blockchain:**
+**Query blockchain (HTTPS):**
 ```bash
 # Get current block height
-curl -s http://localhost:26657/status | jq .result.sync_info.latest_block_height
+curl -k https://[fd10:1234::1]:26657/status | jq .result.sync_info.latest_block_height
 
 # Get validator info
-curl -s http://localhost:26657/validators | jq .
+curl -k https://[fd10:1234::1]:26657/validators | jq .
 ```
 
-**Check node logs:**
+**Check logs:**
 ```bash
-ssh -p 2222 warden@127.0.0.1 'tail -f /opt/trustnet/node/logs/tendermint.log'
-```
+# Node logs (via IPv6)
+ssh -6 warden@fd10:1234::1 'tail -f /opt/trustnet/node/logs/tendermint.log'
 
+# Registry logs (via IPv6)
+ssh -6 keeper@fd10:1234::2 'tail -f /var/lib/trustnet-registry/logs/registry.log'
+```
 ## 📚 Documentation
 
 Comprehensive guides for all aspects of TrustNet:
