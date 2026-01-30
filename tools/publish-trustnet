@@ -1,0 +1,251 @@
+#!/bin/bash
+
+# TrustNet Publish Script
+# Syncs trustnet-wip (private) → TrustNet (public)
+# Copies only: install.sh, README.md, LICENSE, tools/, and public docs
+#
+# Usage: ./publish-trustnet [-c|--create] [-p|--push]
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+WORKING_REPO="$PROJECT_ROOT/trustnet-wip"
+PUBLIC_REPO="$PROJECT_ROOT/TrustNet"
+GITHUB_REPO="https://github.com/jcgarcia/TrustNet.git"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info()    { echo -e "${GREEN}✓${NC} $*"; }
+log_warn()    { echo -e "${YELLOW}⚠${NC} $*"; }
+log_error()   { echo -e "${RED}✗${NC} $*"; }
+
+# Display help
+display_help() {
+    echo "Usage: publish-trustnet [options]"
+    echo ""
+    echo "Options:"
+    echo "  -c | --create   Build distribution (trustnet-wip → TrustNet)"
+    echo "  -p | --push     Push TrustNet/ to GitHub"
+    echo "  -h | --help     Show this help"
+    echo ""
+    echo "Workflow:"
+    echo "  1. Edit in trustnet-wip/ (private repository)"
+    echo "  2. Commit changes: git push"
+    echo "  3. ./tools/publish-trustnet -c  # Sync to public repo"
+    echo "  4. ./tools/publish-trustnet -p  # Push to GitHub (triggers CI/CD)"
+    echo ""
+    echo "Architecture:"
+    echo "  - Private WIP: trustnet-wip/ (Ingasti/trustnet-wip)"
+    echo "  - Public:      TrustNet/ (jcgarcia/TrustNet)"
+    echo "  - GitHub monitors TrustNet main branch for webhooks"
+    echo ""
+}
+
+# Validate both repos exist
+validate_repos() {
+    log_info "Validating repository structure..."
+    
+    if [[ ! -d "$WORKING_REPO/.git" ]]; then
+        log_error "trustnet-wip/ is not a git repository"
+        exit 1
+    fi
+    
+    if [[ ! -d "$PUBLIC_REPO/.git" ]]; then
+        log_error "TrustNet/ is not a git repository"
+        exit 1
+    fi
+    
+    log_info "Both repositories found"
+}
+
+# Check for private files in public repo
+check_private_files() {
+    log_info "Checking for private files..."
+    
+    local found_private=0
+    
+    # Directories that should NOT be in public repo
+    for dir in activity .ai-instructions dist; do
+        if [[ -d "$PUBLIC_REPO/$dir" ]]; then
+            log_error "Found private directory: $dir/ (should not be in public repo)"
+            found_private=1
+        fi
+    done
+    
+    # Private document patterns
+    local private_patterns=(
+        "*SESSION*"
+        "*CONTEXT*"
+        "*SUMMARY*"
+        "*report*"
+        "WEEK*"
+        "DRAFT*"
+    )
+    
+    for pattern in "${private_patterns[@]}"; do
+        if compgen -G "$PUBLIC_REPO/$pattern" > /dev/null 2>&1; then
+            log_error "Found private file matching: $pattern"
+            found_private=1
+        fi
+    done
+    
+    if [[ $found_private -eq 1 ]]; then
+        log_error "Private files found in public repository"
+        exit 1
+    fi
+    
+    log_info "No private files detected"
+}
+
+# Copy distribution files
+copy_files() {
+    log_info "Copying distribution files..."
+    
+    # Install script
+    if [[ -f "$WORKING_REPO/install.sh" ]]; then
+        cp "$WORKING_REPO/install.sh" "$PUBLIC_REPO/"
+        log_info "Copied: install.sh"
+    fi
+    
+    # README
+    if [[ -f "$WORKING_REPO/README.md" ]]; then
+        cp "$WORKING_REPO/README.md" "$PUBLIC_REPO/"
+        log_info "Copied: README.md"
+    fi
+    
+    # LICENSE
+    if [[ -f "$WORKING_REPO/LICENSE" ]]; then
+        cp "$WORKING_REPO/LICENSE" "$PUBLIC_REPO/"
+        log_info "Copied: LICENSE"
+    fi
+    
+    # Jenkinsfile (if it exists)
+    if [[ -f "$WORKING_REPO/Jenkinsfile" ]]; then
+        cp "$WORKING_REPO/Jenkinsfile" "$PUBLIC_REPO/"
+        log_info "Copied: Jenkinsfile"
+    fi
+    
+    # Tools directory
+    if [[ -d "$WORKING_REPO/tools" ]]; then
+        mkdir -p "$PUBLIC_REPO/tools"
+        
+        # Copy Phase scripts
+        for script in phase2-qemu-setup.sh phase3-alpine-install.sh phase4-deploy-cache.sh; do
+            if [[ -f "$WORKING_REPO/tools/$script" ]]; then
+                cp "$WORKING_REPO/tools/$script" "$PUBLIC_REPO/tools/"
+                chmod +x "$PUBLIC_REPO/tools/$script"
+                log_info "Copied: tools/$script"
+            fi
+        done
+    fi
+    
+    # Public docs only (exclude internal work docs)
+    if [[ -d "$WORKING_REPO/docs" ]]; then
+        mkdir -p "$PUBLIC_REPO/docs"
+        
+        # Use rsync to exclude private patterns
+        rsync -av --delete \
+            --exclude='*WEEK*' \
+            --exclude='*SESSION*' \
+            --exclude='*CONTEXT*' \
+            --exclude='*SUMMARY*' \
+            --exclude='*report*' \
+            --exclude='DRAFT*' \
+            "$WORKING_REPO/docs/" "$PUBLIC_REPO/docs/" 2>/dev/null || true
+        
+        if [[ $? -eq 0 ]]; then
+            log_info "Synced: docs/ (public files only)"
+        fi
+    fi
+}
+
+# Commit and verify
+commit_distribution() {
+    cd "$PUBLIC_REPO" || exit 1
+    
+    log_info "Staging files..."
+    git add -A
+    
+    if git diff --cached --quiet; then
+        log_warn "No changes to commit"
+        return 0
+    fi
+    
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local commit_msg="Sync from trustnet-wip: $timestamp"
+    
+    git commit -m "$commit_msg"
+    log_info "Committed: $commit_msg"
+}
+
+# Push to GitHub
+push_distribution() {
+    cd "$PUBLIC_REPO" || exit 1
+    
+    log_info "Pushing to GitHub..."
+    
+    if ! git push origin main; then
+        log_error "Failed to push to GitHub"
+        exit 1
+    fi
+    
+    log_info "Pushed successfully"
+}
+
+# Build distribution
+build_distribution() {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║  TrustNet - Building Distribution                        ║"
+    echo "║  trustnet-wip → TrustNet (public)                        ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    # Verify WIP repo is clean
+    cd "$WORKING_REPO" || exit 1
+    if [[ -n $(git status -s) ]]; then
+        log_error "trustnet-wip/ has uncommitted changes"
+        git status
+        exit 1
+    fi
+    log_info "trustnet-wip/ is clean"
+    echo ""
+    
+    validate_repos
+    check_private_files
+    copy_files
+    commit_distribution
+    
+    echo ""
+    log_info "Distribution build complete"
+}
+
+# Main
+main() {
+    local action="${1:-help}"
+    
+    case "$action" in
+        -c|--create)
+            build_distribution
+            ;;
+        -p|--push)
+            push_distribution
+            ;;
+        -h|--help|help)
+            display_help
+            ;;
+        *)
+            log_error "Unknown action: $action"
+            display_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
