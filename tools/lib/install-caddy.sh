@@ -26,7 +26,7 @@ CADDY_EOF
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
         ${VM_USERNAME}@localhost << EOF
 echo "Enabling Alpine community repository..."
-sudo sed -i 's/#.*community//' /etc/apk/repositories
+echo "http://dl-cdn.alpinelinux.org/alpine/v3.22/community" | sudo tee -a /etc/apk/repositories
 sudo apk update
 
 echo "Installing Caddy..."
