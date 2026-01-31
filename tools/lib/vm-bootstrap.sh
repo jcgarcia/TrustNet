@@ -247,7 +247,7 @@ EOF
     local ssh_ready=0
     for i in {1..30}; do
         if ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -o ConnectTimeout=5 -p "$VM_SSH_PORT" foreman@localhost "echo OK" >/dev/null 2>&1; then
+            -o ConnectTimeout=5 -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "echo OK" >/dev/null 2>&1; then
             ssh_ready=1
             break
         fi
@@ -273,7 +273,7 @@ EOF
     # Prepare cache directories
     log_info "Preparing cache directories..."
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "mkdir -p /var/cache/factory-build/terraform /var/cache/factory-build/kubectl /var/cache/factory-build/helm /var/cache/factory-build/awscli /var/cache/factory-build/ansible /var/cache/factory-build/jenkins"
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "mkdir -p /var/cache/factory-build/terraform /var/cache/factory-build/kubectl /var/cache/factory-build/helm /var/cache/factory-build/awscli /var/cache/factory-build/ansible /var/cache/factory-build/jenkins"
     
     # Run Phase 3 SSH-based installations
     log ""
