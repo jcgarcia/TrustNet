@@ -9,7 +9,7 @@ install_cosmos_sdk() {
     
     # Install dependencies
     log_info "Installing build dependencies..."
-    ssh_run "apk add --no-cache git make gcc musl-dev linux-headers curl jq"
+    ssh_exec "apk add --no-cache git make gcc musl-dev linux-headers curl jq"
     
     # Install Go (required for Cosmos SDK)
     log_info "Installing Go..."
@@ -22,43 +22,43 @@ install_cosmos_sdk() {
     local GO_ARCH="arm64"
     
     # Check if we're on x86_64 (Intel)
-    if ssh_run "uname -m | grep -q x86_64"; then
+    if ssh_exec "uname -m | grep -q x86_64"; then
         GO_ARCH="amd64"
     fi
     
-    ssh_run "cd /tmp && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o go.tar.gz"
-    ssh_run "rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz"
-    ssh_run "rm /tmp/go.tar.gz"
+    ssh_exec "cd /tmp && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o go.tar.gz"
+    ssh_exec "rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz"
+    ssh_exec "rm /tmp/go.tar.gz"
     
     # Configure Go environment for ${VM_USERNAME} user
-    ssh_run "cat >> /home/${VM_USERNAME}/.profile << 'EOF'
+    ssh_exec "cat >> /home/${VM_USERNAME}/.profile << 'EOF'
 export PATH=\$PATH:/usr/local/go/bin:\$HOME/go/bin
 export GOPATH=\$HOME/go
 EOF"
     
     # Apply Go environment immediately
-    ssh_run "source /home/${VM_USERNAME}/.profile"
+    ssh_exec "source /home/${VM_USERNAME}/.profile"
     
     log_success "Go ${GO_VERSION} installed"
     
     # Install Ignite CLI (Cosmos SDK scaffolding tool)
     log_info "Installing Ignite CLI..."
-    ssh_run "source /home/${VM_USERNAME}/.profile && curl -fsSL https://get.ignite.com/cli | bash"
+    ssh_exec "source /home/${VM_USERNAME}/.profile && curl -fsSL https://get.ignite.com/cli | bash"
     
     log_success "Ignite CLI installed"
     
     # Verify installations
     log_info "Verifying installations..."
-    local GO_VER=$(ssh_run "source /home/${VM_USERNAME}/.profile && go version" | grep -oP 'go\d+\.\d+\.\d+')
-    local IGNITE_VER=$(ssh_run "source /home/${VM_USERNAME}/.profile && ignite version" | head -n1)
+    local GO_VER=$(ssh_exec "source /home/${VM_USERNAME}/.profile && go version" | grep -oP 'go\d+\.\d+\.\d+')
+    local IGNITE_VER=$(ssh_exec "source /home/${VM_USERNAME}/.profile && ignite version" | head -n1)
     
     log_success "Go version: ${GO_VER}"
     log_success "Ignite CLI version: ${IGNITE_VER}"
     
     # Create TrustNet directories
     log_info "Creating TrustNet directories..."
-    ssh_run "mkdir -p /home/${VM_USERNAME}/trustnet/{config,data,keys}"
-    ssh_run "chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet"
+    ssh_exec "mkdir -p /home/${VM_USERNAME}/trustnet/{config,data,keys}"
+    ssh_exec "chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet"
     
     log_success "Cosmos SDK installation complete"
 }
@@ -69,7 +69,7 @@ configure_trustnet_client() {
     # Create TrustNet configuration
     log_info "Creating TrustNet configuration..."
     
-    ssh_run "cat > /home/${VM_USERNAME}/trustnet/config/config.toml << 'EOF'
+    ssh_exec "cat > /home/${VM_USERNAME}/trustnet/config/config.toml << 'EOF'
 # TrustNet Node Configuration
 
 [node]
@@ -109,14 +109,14 @@ keyring_dir = "/home/${VM_USERNAME}/trustnet/keys"
 port = 8080
 EOF"
     
-    ssh_run "chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet/config/config.toml"
+    ssh_exec "chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet/config/config.toml"
     
     log_success "TrustNet configuration created"
     
     # Create TrustNet systemd service
     log_info "Creating TrustNet systemd service..."
     
-    ssh_run "cat > /etc/init.d/trustnet << 'EOF'
+    ssh_exec "cat > /etc/init.d/trustnet << 'EOF'
 #!/sbin/openrc-run
 
 name=\"TrustNet Node\"
@@ -138,8 +138,8 @@ start_pre() {
 }
 EOF"
     
-    ssh_run "chmod +x /etc/init.d/trustnet"
-    ssh_run "rc-update add trustnet default"
+    ssh_exec "chmod +x /etc/init.d/trustnet"
+    ssh_exec "rc-update add trustnet default"
     
     log_success "TrustNet service configured (will start after blockchain client is built)"
 }
@@ -149,10 +149,10 @@ install_trustnet_web_ui() {
     
     # Create simple web UI directory
     log_info "Creating web UI..."
-    ssh_run "mkdir -p /var/www/trustnet"
+    ssh_exec "mkdir -p /var/www/trustnet"
     
     # Create basic HTML dashboard
-    ssh_run "cat > /var/www/trustnet/index.html << 'EOF'
+    ssh_exec "cat > /var/www/trustnet/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang=\"en\">
 <head>
@@ -275,7 +275,7 @@ install_trustnet_web_ui() {
 </html>
 EOF"
     
-    ssh_run "chown -R caddy:caddy /var/www/trustnet"
+    ssh_exec "chown -R caddy:caddy /var/www/trustnet"
     
     log_success "Web UI installed at /var/www/trustnet"
 }
