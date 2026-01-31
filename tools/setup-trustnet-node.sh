@@ -373,7 +373,12 @@ print_completion_message() {
 
 main() {
     clear
-    show_banner "TrustNet Node Installer" "v1.0.0"
+    log ""
+    log "═══════════════════════════════════════════════════════════════"
+    log "    TrustNet Node Installer v1.0.0"
+    log "    Blockchain-Based Trust Network (Cosmos SDK)"
+    log "═══════════════════════════════════════════════════════════════"
+    log ""
     
     # Pre-flight checks
     check_dependencies
