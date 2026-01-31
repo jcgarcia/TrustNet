@@ -482,14 +482,14 @@ main() {
     configure_installed_vm
     
     # Phase 5: Install software
-    install_caddy
+    install_caddy_via_ssh
     install_blockchain_stack
     
     # Phase 6: Configure SSL certificates
-    install_certificates
+    install_certificates_on_host
     
     # Phase 7: Configure MOTD and final touches
-    setup_motd
+    setup_motd_via_ssh
     
     # Phase 8: Configure host SSH and save credentials
     configure_ssh_on_host
