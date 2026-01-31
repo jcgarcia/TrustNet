@@ -12,18 +12,19 @@ install_caddy_via_ssh() {
     log_info "Installing Caddy reverse proxy via SSH..."
     
     # Create Caddyfile content - uses explicit cert files (not tls internal which expires in 12h)
-    cat > /tmp/Caddyfile << 'CADDY_EOF'
-factory.local {
+    cat > /tmp/Caddyfile << CADDY_EOF
+${VM_HOSTNAME} {
     reverse_proxy localhost:8080
-    tls /etc/caddy/certs/factory.crt /etc/caddy/certs/factory.key
+    tls /etc/caddy/certs/${VM_HOSTNAME}.crt /etc/caddy/certs/${VM_HOSTNAME}.key
 }
 CADDY_EOF
     
     # Install Caddy
     ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
-        foreman@localhost << 'EOF'
+        ${VM_USERNAME}@localhost << EOF
 echo "Installing Caddy..."
 sudo apk add caddy
 
@@ -31,12 +32,12 @@ echo "Creating Caddy configuration and certificate directories..."
 sudo mkdir -p /etc/caddy
 sudo mkdir -p /etc/caddy/certs
 
-echo "Generating 365-day self-signed certificate for factory.local..."
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/caddy/certs/factory.key \
-    -out /etc/caddy/certs/factory.crt \
-    -subj '/CN=factory.local' \
-    -addext 'subjectAltName=DNS:factory.local'
+echo "Generating 365-day self-signed certificate for ${VM_HOSTNAME}..."
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
+    -keyout /etc/caddy/certs/${VM_HOSTNAME}.key \\
+    -out /etc/caddy/certs/${VM_HOSTNAME}.crt \\
+    -subj '/CN=${VM_HOSTNAME}' \\
+    -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
 
 sudo chown caddy:caddy /etc/caddy/certs/*
 sudo chmod 600 /etc/caddy/certs/*
@@ -45,13 +46,15 @@ EOF
     # Copy Caddyfile
     scp -i "$VM_SSH_PRIVATE_KEY" -P "$VM_SSH_PORT" \
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        /tmp/Caddyfile foreman@localhost:/tmp/
+        -o IdentitiesOnly=yes \
+        /tmp/Caddyfile ${VM_USERNAME}@localhost:/tmp/
     
     # Configure and start Caddy
     ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
-        foreman@localhost << 'EOF'
+        ${VM_USERNAME}@localhost << 'EOF'
 sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
