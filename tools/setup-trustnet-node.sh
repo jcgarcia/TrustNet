@@ -107,7 +107,20 @@ export ALPINE_VERSION ALPINE_ARCH CACHE_DIR
 # Source Modules
 ################################################################################
 
-LIB_DIR="${SCRIPT_DIR}/lib"
+# Determine lib directory location
+if [ "$(basename "$SCRIPT_DIR")" = "trustnet" ]; then
+    # One-liner install: ~/trustnet/lib/
+    LIB_DIR="${SCRIPT_DIR}/lib"
+else
+    # Development/repo: ~/GitProjects/TrustNet/trustnet-wip/tools/lib/
+    LIB_DIR="${SCRIPT_DIR}/lib"
+fi
+
+# Verify lib directory exists
+if [ ! -d "$LIB_DIR" ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: Module directory not found: $LIB_DIR" >&2
+    exit 1
+fi
 
 # Core utilities
 source "${LIB_DIR}/common.sh"
