@@ -397,6 +397,21 @@ main() {
     check_dependencies
     offer_configuration_choice
     
+    # Generate secure passwords
+    log_info "Generating secure passwords..."
+    VM_ROOT_PASSWORD=$(generate_secure_password)
+    WARDEN_OS_PASSWORD=$(generate_secure_password)
+    
+    export VM_ROOT_PASSWORD WARDEN_OS_PASSWORD
+    
+    # Create VM directory
+    mkdir -p "$VM_DIR"
+    cd "$VM_DIR"
+    
+    # Setup for VM creation
+    ensure_qemu
+    setup_ssh_keys
+    
     # Phase 1: Download and cache Alpine
     download_alpine
     
