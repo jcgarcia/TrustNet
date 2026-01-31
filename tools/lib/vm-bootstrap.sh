@@ -94,9 +94,16 @@ configure_installed_vm() {
         exit 1
     fi
     
-    # Port is open, but SSH may not be fully ready - Alpine boot is SLOW under TCG emulation
-    log_info "Port open, waiting for Alpine to finish booting (this is slow under TCG emulation)..."
-    log_info "This can take 3-5 minutes on TCG emulation, please be patient..."
+    # Port is open, but SSH may not be fully ready - wait for Alpine to finish booting
+    # Detect acceleration type to show appropriate message
+    local host_arch=$(uname -m)
+    if [ "$host_arch" = "${ALPINE_ARCH}" ] && [ -e /dev/kvm ]; then
+        log_info "Port open, waiting for Alpine to finish booting (KVM acceleration)..."
+        log_info "This should take 30-60 seconds with native virtualization..."
+    else
+        log_info "Port open, waiting for Alpine to finish booting (TCG emulation)..."
+        log_info "This can take 3-5 minutes on TCG emulation, please be patient..."
+    fi
     local ssh_test_attempts=0
     local max_attempts=60  # 60 attempts × 5 seconds = 300 seconds (5 minutes)
     while [ $ssh_test_attempts -lt $max_attempts ]; do
