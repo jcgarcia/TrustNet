@@ -32,7 +32,7 @@ setup_cache_disk_in_vm() {
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "grep -q '/dev/vdb' /etc/fstab || echo '/dev/vdb /var/cache/trustnet-build ext4 defaults 0 2' | sudo tee -a /etc/fstab" >/dev/null
     
-    log_success "Cache disk mounted at /var/cache/factory-build"
+    log_success "Cache disk mounted at /var/cache/trustnet-build"
 }
 
 setup_data_disk_in_vm() {
@@ -278,13 +278,13 @@ EOF
     # Setup cache disk for persistent build cache (vdb)
     setup_cache_disk_in_vm
     
-    # Setup data disk for Jenkins workspaces (vdc)
+    # Setup data disk for blockchain data (vdc)
     setup_data_disk_in_vm
     
-    # Prepare cache directories
+    # Prepare cache directories for blockchain tools
     log_info "Preparing cache directories..."
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "mkdir -p /var/cache/factory-build/terraform /var/cache/factory-build/kubectl /var/cache/factory-build/helm /var/cache/factory-build/awscli /var/cache/factory-build/ansible /var/cache/factory-build/jenkins"
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "mkdir -p /var/cache/trustnet-build/{go,ignite,blockchain}"
     
     # Run Phase 3 SSH-based installations
     log ""
