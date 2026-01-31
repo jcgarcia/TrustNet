@@ -309,26 +309,39 @@ EOF
 configure_ssh_on_host() {
     log_section "Configuring SSH on Host"
     
-    # Add SSH config entry for TrustNet Node
-    if ! grep -q "Host trustnet" ~/.ssh/config 2>/dev/null; then
-        log_info "Adding SSH config entry..."
-        mkdir -p ~/.ssh
-        cat >> ~/.ssh/config << EOF
+    local ssh_config="${HOME}/.ssh/config"
+    
+    mkdir -p "${HOME}/.ssh"
+    chmod 700 "${HOME}/.ssh"
+    
+    # Remove old TrustNet entries if they exist
+    if [ -f "$ssh_config" ]; then
+        awk '/^# TrustNet Node/,/^$/{next} /^Host trustnet$/,/^$/{next} {print}' "$ssh_config" > "${ssh_config}.tmp"
+        mv "${ssh_config}.tmp" "$ssh_config"
+    else
+        touch "$ssh_config"
+    fi
+    
+    chmod 600 "$ssh_config"
+    
+    # Add fresh SSH config entry
+    cat >> "$ssh_config" << EOF
 
 # TrustNet Node
 Host trustnet
-    HostName 127.0.0.1
+    HostName localhost
     Port ${VM_SSH_PORT}
     User ${VM_USERNAME}
-    IdentityFile ~/.ssh/${SSH_KEY_NAME}
+    IdentityFile ${VM_SSH_PRIVATE_KEY}
+    IdentitiesOnly yes
+    ForwardAgent yes
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
     LogLevel ERROR
+
 EOF
-        log_success "SSH config added: ssh trustnet"
-    else
-        log_info "SSH config already exists"
-    fi
+
+    log_success "SSH config updated (ssh trustnet)"
 }
 
 save_credentials() {
