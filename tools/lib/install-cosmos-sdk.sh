@@ -30,35 +30,35 @@ install_cosmos_sdk() {
     ssh_run "rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz"
     ssh_run "rm /tmp/go.tar.gz"
     
-    # Configure Go environment for warden user
-    ssh_run "cat >> /home/warden/.profile << 'EOF'
+    # Configure Go environment for ${VM_USERNAME} user
+    ssh_run "cat >> /home/${VM_USERNAME}/.profile << 'EOF'
 export PATH=\$PATH:/usr/local/go/bin:\$HOME/go/bin
 export GOPATH=\$HOME/go
 EOF"
     
     # Apply Go environment immediately
-    ssh_run "source /home/warden/.profile"
+    ssh_run "source /home/${VM_USERNAME}/.profile"
     
     log_success "Go ${GO_VERSION} installed"
     
     # Install Ignite CLI (Cosmos SDK scaffolding tool)
     log_info "Installing Ignite CLI..."
-    ssh_run "source /home/warden/.profile && curl -fsSL https://get.ignite.com/cli | bash"
+    ssh_run "source /home/${VM_USERNAME}/.profile && curl -fsSL https://get.ignite.com/cli | bash"
     
     log_success "Ignite CLI installed"
     
     # Verify installations
     log_info "Verifying installations..."
-    local GO_VER=$(ssh_run "source /home/warden/.profile && go version" | grep -oP 'go\d+\.\d+\.\d+')
-    local IGNITE_VER=$(ssh_run "source /home/warden/.profile && ignite version" | head -n1)
+    local GO_VER=$(ssh_run "source /home/${VM_USERNAME}/.profile && go version" | grep -oP 'go\d+\.\d+\.\d+')
+    local IGNITE_VER=$(ssh_run "source /home/${VM_USERNAME}/.profile && ignite version" | head -n1)
     
     log_success "Go version: ${GO_VER}"
     log_success "Ignite CLI version: ${IGNITE_VER}"
     
     # Create TrustNet directories
     log_info "Creating TrustNet directories..."
-    ssh_run "mkdir -p /home/warden/trustnet/{config,data,keys}"
-    ssh_run "chown -R warden:warden /home/warden/trustnet"
+    ssh_run "mkdir -p /home/${VM_USERNAME}/trustnet/{config,data,keys}"
+    ssh_run "chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet"
     
     log_success "Cosmos SDK installation complete"
 }
@@ -69,7 +69,7 @@ configure_trustnet_client() {
     # Create TrustNet configuration
     log_info "Creating TrustNet configuration..."
     
-    ssh_run "cat > /home/warden/trustnet/config/config.toml << 'EOF'
+    ssh_run "cat > /home/${VM_USERNAME}/trustnet/config/config.toml << 'EOF'
 # TrustNet Node Configuration
 
 [node]
@@ -102,14 +102,14 @@ persistent_peers = \"\"
 [identity]
 # Path to keypair (generated on first run)
 keyring_backend = \"file\"
-keyring_dir = \"/home/warden/trustnet/keys\"
+keyring_dir = "/home/${VM_USERNAME}/trustnet/keys"
 
 [web]
 # Web UI port (served via Caddy HTTPS)
 port = 8080
 EOF"
     
-    ssh_run "chown warden:warden /home/warden/trustnet/config/config.toml"
+    ssh_run "chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet/config/config.toml"
     
     log_success "TrustNet configuration created"
     
@@ -122,9 +122,9 @@ EOF"
 name=\"TrustNet Node\"
 description=\"TrustNet Blockchain Client\"
 
-command=\"/home/warden/trustnet/bin/trustnetd\"
-command_args=\"start --home /home/warden/trustnet\"
-command_user=\"warden:warden\"
+command="/home/${VM_USERNAME}/trustnet/bin/trustnetd"
+command_args="start --home /home/${VM_USERNAME}/trustnet"
+command_user="${VM_USERNAME}:${VM_USERNAME}"
 command_background=\"yes\"
 pidfile=\"/run/trustnet.pid\"
 
@@ -134,7 +134,7 @@ depend() {
 }
 
 start_pre() {
-    checkpath --directory --owner warden:warden --mode 0755 /home/warden/trustnet/data
+    checkpath --directory --owner ${VM_USERNAME}:${VM_USERNAME} --mode 0755 /home/${VM_USERNAME}/trustnet/data
 }
 EOF"
     

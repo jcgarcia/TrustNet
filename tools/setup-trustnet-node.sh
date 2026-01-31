@@ -6,7 +6,7 @@
 #
 # Creates a complete TrustNet blockchain node with:
 #   - Hostname: trustnet.local
-#   - User: warden (with sudo)
+#   - User: ${VM_USERNAME} (warden) with sudo
 #   - SSH key authentication  
 #   - Blockchain tools: Cosmos SDK, Ignite CLI, TrustNet client
 #   - SSL/HTTPS with Let's Encrypt
@@ -358,9 +358,9 @@ Blockchain Network:
   API: https://api.trustnet.network:1317
   
 Node Configuration:
-  Config: /home/warden/trustnet/config/config.toml
-  Data: /home/warden/trustnet/data
-  Keys: /home/warden/trustnet/keys
+  Config: /home/${VM_USERNAME}/trustnet/config/config.toml
+  Data: /home/${VM_USERNAME}/trustnet/data
+  Keys: /home/${VM_USERNAME}/trustnet/keys
   
 VM Management:
   Start: ${VM_DIR}/start-trustnet.sh
@@ -379,7 +379,7 @@ Documentation:
   API Reference: https://docs.trustnet.network/api
 
 ╔══════════════════════════════════════════════════════════════════════╗
-║  Your identity keys are stored in /home/warden/trustnet/keys         ║
+║  Your identity keys are stored in /home/${VM_USERNAME}/trustnet/keys         ║
 ║  BACK THEM UP! Loss of keys = loss of identity and reputation       ║
 ╚══════════════════════════════════════════════════════════════════════╝
 EOF
