@@ -398,7 +398,7 @@ main() {
     offer_configuration_choice
     
     # Phase 1: Download and cache Alpine
-    ensure_alpine_cached
+    download_alpine
     
     # Phase 2: Create and configure VM
     create_vm_disks
