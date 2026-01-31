@@ -478,10 +478,8 @@ main() {
     generate_start_script
     
     # Phase 4: Bootstrap Alpine OS (after installation completes)
+    # (configure_installed_vm handles user creation, disks, and SSH)
     configure_installed_vm
-    setup_cache_disk_in_vm
-    setup_data_disk_in_vm
-    configure_ssh
     
     # Phase 5: Install software
     install_caddy
