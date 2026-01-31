@@ -286,31 +286,7 @@ EOF
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "mkdir -p /var/cache/trustnet-build/{go,ignite,blockchain}"
     
-    # Run Phase 3 SSH-based installations
-    log ""
-    log "Installing tools via SSH..."
-    
-    # Get tool versions
-    local terraform_version=$(get_latest_terraform_version)
-    local kubectl_version=$(get_latest_kubectl_version)
-    local helm_version=$(get_latest_helm_version)
-    
-    # Install in order
-    install_base_packages_via_ssh
-    install_docker_via_ssh
-    install_caddy_via_ssh
-    install_go_via_ssh
-    install_kubernetes_tools_via_ssh "$kubectl_version" "$helm_version"
-    install_terraform_via_ssh "$terraform_version"
-    install_aws_cli_via_ssh
-    install_jcscripts_via_ssh
-    install_jenkins_via_ssh
-    configure_jenkins_via_ssh
-    
-    # Setup MOTD
-    setup_motd_via_ssh
-    
-    log_success "All tools installed successfully"
+    log_success "VM bootstrap complete"
 }
 
 # Export functions
