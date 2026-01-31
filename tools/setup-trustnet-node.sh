@@ -14,9 +14,11 @@
 #   - SSH config on host
 #
 # Usage:
-#   ./setup-trustnet-node.sh [--auto|-y]
+#   ./setup-trustnet-node.sh [--auto|-y] [--arch=x86_64|aarch64]
 #
-#   --auto, -y    Use recommended settings without prompts
+#   --auto, -y             Use recommended settings without prompts
+#   --arch=x86_64          Use x86_64 architecture (default, fast KVM on Intel/AMD)
+#   --arch=aarch64         Use ARM64 architecture (for cloud pods, slow on x86_64 hosts)
 #
 ################################################################################
 
@@ -43,11 +45,24 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Log file: $LOG_FILE"
 # Trap errors and cleanup
 trap 'echo "[$(date +\"%Y-%m-%d %H:%M:%S\")] ERROR: Installation failed at line $LINENO. Check log: $LOG_FILE" >&2; exit 1' ERR
 
-# Parse command-line arguments
-AUTO_MODE=false
+ALPINE_ARCH="x86_64"  # Default to x86_64 for speed (KVM on Intel/AMD hosts)
 for arg in "$@"; do
     case $arg in
         --auto|-y)
+            AUTO_MODE=true
+            shift
+            ;;
+        --arch=x86_64)
+            ALPINE_ARCH="x86_64"
+            shift
+            ;;
+        --arch=aarch64)
+            ALPINE_ARCH="aarch64"
+            shift
+            ;;
+        --arch=*)
+            echo "Error: Invalid architecture. Use --arch=x86_64 or --arch=aarch64"
+            exit 1)
             AUTO_MODE=true
             shift
             ;;
@@ -95,7 +110,7 @@ DATA_DISK="${VM_DIR}/${VM_NAME}-data.qcow2"
 
 # Alpine configuration (will be auto-detected to latest stable)
 ALPINE_VERSION=""  # Auto-detect latest
-ALPINE_ARCH="x86_64"  # Use x86_64 for fast native execution (ARM versions for cloud later)
+# ALPINE_ARCH set from command-line args (defaults to x86_64)
 
 # Export variables for modules
 export SCRIPT_DIR PROJECT_ROOT VM_DIR VM_NAME VM_MEMORY VM_CPUS VM_SSH_PORT
@@ -414,6 +429,8 @@ main() {
     log "    TrustNet Node Installer v1.0.0"
     log "    Blockchain-Based Trust Network (Cosmos SDK)"
     log "═══════════════════════════════════════════════════════════════"
+    log ""
+    log_info "Architecture: ${ALPINE_ARCH} $([ "$ALPINE_ARCH" = "x86_64" ] && echo "(fast KVM)" || echo "(for cloud pods)")"
     log ""
     
     # Pre-flight checks
