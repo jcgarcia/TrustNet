@@ -11,7 +11,7 @@ fi
 ensure_qemu() {
     log "Checking QEMU installation..."
     
-    if command -v qemu-system-aarch64 &> /dev/null; then
+    if command -v qemu-system-x86_64 &> /dev/null; then
         log "  ✓ QEMU already installed"
         return 0
     fi
@@ -22,7 +22,7 @@ ensure_qemu() {
         "${SCRIPT_DIR}/install-qemu.sh"
     else
         log_error "QEMU not found. Please install manually:"
-        log_info "  Ubuntu: sudo apt-get install qemu-system-arm qemu-efi-aarch64"
+        log_info "  Ubuntu: sudo apt-get install qemu-system-x86 qemu-utils"
         log_info "  macOS: brew install qemu"
         exit 1
     fi
@@ -186,6 +186,13 @@ create_disks() {
 }
 
 find_uefi_firmware() {
+    # x86_64 uses default BIOS, no UEFI firmware file needed
+    if [ "${ALPINE_ARCH}" = "x86_64" ]; then
+        echo ""  # Empty string means use default BIOS
+        return 0
+    fi
+    
+    # ARM64 UEFI firmware (for future cloud deployment)
     # UEFI firmware requires both CODE (read-only) and VARS (read-write) files
     # We'll return the CODE file path and create a writable VARS copy
     local firmware_paths=(
@@ -233,11 +240,11 @@ find_uefi_vars() {
 start_vm_for_install() {
     log "Starting VM for Alpine installation..."
     
-    local uefi_fw="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd"
+    local uefi_fw=$(find_uefi_firmware)
     local iso_path="${VM_DIR}/isos/${ALPINE_ISO}"
     
-    # Check UEFI firmware exists
-    if [ ! -f "$uefi_fw" ]; then
+    # Check UEFI firmware exists (only needed for ARM64)
+    if [ "${ALPINE_ARCH}" = "aarch64" ] && [ ! -f "$uefi_fw" ]; then
         log_error "UEFI firmware not found at $uefi_fw"
         log_info "Install with: sudo apt-get install qemu-efi-aarch64"
         exit 1
@@ -248,14 +255,18 @@ start_vm_for_install() {
     local host_arch=$(uname -m)
     local qemu_accel=""
     
-    if [ "$host_arch" = "aarch64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
-        # ARM64 host with KVM support - can use KVM for ARM64 guest
+    if [ "$host_arch" = "x86_64" ] && [ "${ALPINE_ARCH}" = "x86_64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+        # x86_64 host with KVM support - use KVM for x86_64 guest (FAST!)
+        qemu_accel="-accel kvm"
+        log_info "  Using KVM acceleration (x86_64 native - FAST!)"
+    elif [ "$host_arch" = "aarch64" ] && [ "${ALPINE_ARCH}" = "aarch64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+        # ARM64 host with KVM support - use KVM for ARM64 guest
         qemu_accel="-accel kvm"
         log_info "  Using KVM acceleration (ARM64 native)"
-    elif [ "$host_arch" = "x86_64" ]; then
-        # x86_64 host cannot use KVM for ARM64 guest - use TCG (software emulation)
+    else
+        # Cross-architecture or no KVM - use TCG (software emulation, slow)
         qemu_accel="-accel tcg"
-        log_info "  Using TCG emulation (x86_64 host → ARM64 guest)"
+        log_info "  Using TCG emulation ($host_arch host → ${ALPINE_ARCH} guest)"
         log_info "  Note: Builds will be slower than native ARM64"
     else
         # Fallback to TCG for any other scenario
@@ -273,19 +284,25 @@ start_vm_for_install() {
         log "  Installing Alpine Linux to disk (TCG emulation - SLOW)..."
         log "  ⚠️  WARNING: TCG emulation is 10-20x slower than KVM"
         log "  This will take 15-20 minutes (automated)"
-        log "  Alpine boot alone can take 10-15 minutes on x86_64 hosts"
+        log "  Alpine boot alone can take 10-15 minutes with TCG emulation"
         log ""
         log "  Please be patient - the installation is working, just very slow"
     else
-        log "  Installing Alpine Linux to disk (KVM acceleration)..."
-        log "  This will take 3-5 minutes (automated)"
+        log "  Installing Alpine Linux to disk (KVM acceleration - FAST!)..."
+        log "  ✓ Using native virtualization"
+        log "  This will take 2-3 minutes (automated)"
     fi
     log ""
     
-    # Build complete QEMU command using -bios (same as start-factory.sh)
-    # NOTE: Data disk NOT attached during Alpine installation to prevent setup-disk from erasing it
-    # The data disk will be attached when VM starts via start-factory.sh
-    local qemu_cmd="qemu-system-aarch64 -M virt $qemu_accel -cpu cortex-a72 -smp $VM_CPUS -m $VM_MEMORY -bios $uefi_fw -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22 -nographic"
+    # Build QEMU command based on architecture
+    local qemu_cmd
+    if [ "${ALPINE_ARCH}" = "x86_64" ]; then
+        # x86_64: Use KVM acceleration (native), default BIOS, q35 machine
+        qemu_cmd="qemu-system-x86_64 -M q35 $qemu_accel -cpu host -smp $VM_CPUS -m $VM_MEMORY -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22 -nographic"
+    else
+        # ARM64: Use TCG emulation (or KVM on ARM hosts), UEFI firmware, virt machine
+        qemu_cmd="qemu-system-aarch64 -M virt $qemu_accel -cpu cortex-a72 -smp $VM_CPUS -m $VM_MEMORY -bios $uefi_fw -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22 -nographic"
+    fi
     
     # Export variables for expect script
     export VM_HOSTNAME VM_ROOT_PASSWORD

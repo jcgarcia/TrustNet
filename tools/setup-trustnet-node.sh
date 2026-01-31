@@ -95,7 +95,7 @@ DATA_DISK="${VM_DIR}/${VM_NAME}-data.qcow2"
 
 # Alpine configuration (will be auto-detected to latest stable)
 ALPINE_VERSION=""  # Auto-detect latest
-ALPINE_ARCH="aarch64"
+ALPINE_ARCH="x86_64"  # Use x86_64 for fast native execution (ARM versions for cloud later)
 
 # Export variables for modules
 export SCRIPT_DIR PROJECT_ROOT VM_DIR VM_NAME VM_MEMORY VM_CPUS VM_SSH_PORT
@@ -207,23 +207,46 @@ fi
 
 echo -e "\${GREEN}Starting TrustNet Node...\${NC}"
 
+# Detect architecture and set QEMU command
 HOST_ARCH=\$(uname -m)
-if [ "\$HOST_ARCH" = "aarch64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+if [ "\$HOST_ARCH" = "x86_64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    # x86_64 with KVM: Native virtualization (fast!)
     QEMU_ACCEL="-accel kvm"
-elif [ "\$HOST_ARCH" = "x86_64" ]; then
-    QEMU_ACCEL="-accel tcg"
+    QEMU_SYSTEM="qemu-system-x86_64"
+    QEMU_MACHINE="-M q35"
+    QEMU_CPU="-cpu host"
+    QEMU_BIOS=""  # Use default BIOS
+elif [ "\$HOST_ARCH" = "aarch64" ] && [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    # ARM64 with KVM: Native virtualization
+    QEMU_ACCEL="-accel kvm"
+    QEMU_SYSTEM="qemu-system-aarch64"
+    QEMU_MACHINE="-M virt"
+    QEMU_CPU="-cpu host"
+    QEMU_BIOS="-bios \${UEFI_FW}"
 else
+    # Fallback: TCG emulation (slow)
     QEMU_ACCEL="-accel tcg"
+    if [ "\$HOST_ARCH" = "x86_64" ]; then
+        QEMU_SYSTEM="qemu-system-x86_64"
+        QEMU_MACHINE="-M q35"
+        QEMU_CPU="-cpu qemu64"
+        QEMU_BIOS=""
+    else
+        QEMU_SYSTEM="qemu-system-aarch64"
+        QEMU_MACHINE="-M virt"
+        QEMU_CPU="-cpu cortex-a72"
+        QEMU_BIOS="-bios \${UEFI_FW}"
+    fi
 fi
 
 touch "\${PID_FILE}"
 
-sudo qemu-system-aarch64 \\
-    -M virt \${QEMU_ACCEL} \\
-    -cpu cortex-a72 \\
+sudo \${QEMU_SYSTEM} \\
+    \${QEMU_MACHINE} \${QEMU_ACCEL} \\
+    \${QEMU_CPU} \\
     -smp \${VM_CPUS} \\
     -m \${VM_MEMORY} \\
-    -bios \${UEFI_FW} \\
+    \${QEMU_BIOS} \\
     -drive file="\${SYSTEM_DISK}",if=virtio,format=qcow2 \\
     -drive file="\${CACHE_DISK}",if=virtio,format=qcow2 \\
     -drive file="\${DATA_DISK}",if=virtio,format=qcow2 \\
