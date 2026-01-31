@@ -235,12 +235,23 @@ EOF
     
     # Add SSH public key
     log "Adding SSH public key for ${VM_USERNAME}..."
-    ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    if ! ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -p "$VM_SSH_PORT" root@localhost << EOF
 echo '$(cat "$VM_SSH_PUBLIC_KEY")' > /home/${VM_USERNAME}/.ssh/authorized_keys
 chmod 600 /home/${VM_USERNAME}/.ssh/authorized_keys
 chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/.ssh
+# Verify key was added
+if [ -f /home/${VM_USERNAME}/.ssh/authorized_keys ]; then
+    echo "✓ SSH key added successfully"
+else
+    echo "ERROR: Failed to create authorized_keys file"
+    exit 1
+fi
 EOF
+    then
+        log_error "Failed to add SSH public key"
+        exit 1
+    fi
 
     # Wait for SSH to be fully ready after sshd restart
     log_info "Waiting for SSH to be fully ready..."
