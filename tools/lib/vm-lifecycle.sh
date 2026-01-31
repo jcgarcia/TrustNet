@@ -80,7 +80,7 @@ check_dependencies() {
 }
 
 setup_ssh_keys() {
-    log "Setting up SSH keys for foreman user..."
+    log "Setting up SSH keys for ${VM_USERNAME} user..."
     
     local ssh_dir="${HOME}/.ssh"
     local private_key="${ssh_dir}/${SSH_KEY_NAME}"
