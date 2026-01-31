@@ -9,7 +9,7 @@ install_cosmos_sdk() {
     
     # Install dependencies
     log_info "Installing build dependencies..."
-    ssh_exec "apk add --no-cache git make gcc musl-dev linux-headers curl jq"
+    ssh_exec "sudo apk add --no-cache git make gcc musl-dev linux-headers curl jq"
     
     # Install Go (required for Cosmos SDK)
     log_info "Installing Go..."
@@ -27,7 +27,7 @@ install_cosmos_sdk() {
     fi
     
     ssh_exec "cd /tmp && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz -o go.tar.gz"
-    ssh_exec "rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz"
+    ssh_exec "sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tar.gz"
     ssh_exec "rm /tmp/go.tar.gz"
     
     # Configure Go environment for ${VM_USERNAME} user
