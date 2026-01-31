@@ -93,7 +93,7 @@ setup_ssh_keys() {
         log "  ✓ SSH key already exists: $private_key"
     else
         log "  Generating SSH key pair..."
-        ssh-keygen -t ed25519 -f "$private_key" -N "" -C "foreman@factory"
+        ssh-keygen -t ed25519 -f "$private_key" -N "" -C "${VM_USERNAME}@${VM_HOSTNAME}"
         log "  ✓ SSH key generated"
     fi
     

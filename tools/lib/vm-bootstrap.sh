@@ -169,8 +169,8 @@ exec doas "\$@"
 SUDO_WRAPPER
 chmod 755 /usr/local/bin/sudo
 
-# Create .bashrc for foreman user (required for jcscripts)
-cat > /home/foreman/.bashrc << 'BASHRC_INIT'
+# Create .bashrc for ${VM_USERNAME} user
+cat > /home/${VM_USERNAME}/.bashrc << 'BASHRC_INIT'
 # ~/.bashrc: executed by bash for non-login shells
 
 # If not running interactively, don't do anything
@@ -199,7 +199,7 @@ if [ -f /etc/bash/bashrc.d/bash_completion.sh ]; then
 fi
 BASHRC_INIT
 
-chown foreman:foreman /home/foreman/.bashrc
+chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/.bashrc
 
 # Harden SSH configuration - disable password authentication
 cat >> /etc/ssh/sshd_config << 'SSH_CONFIG'
@@ -218,21 +218,21 @@ rc-service sshd restart
 # Wait for SSH to fully restart before allowing external connections
 sleep 5
 
-echo "✓ Foreman user created"
+echo "✓ ${VM_USERNAME} user created"
 echo "✓ SSH hardened (keys only, no password authentication)"
 EOF
     then
-        log_error "Failed to create foreman user"
+        log_error "Failed to create ${VM_USERNAME} user"
         exit 1
     fi
     
     # Add SSH public key
-    log "Adding SSH public key for foreman..."
+    log "Adding SSH public key for ${VM_USERNAME}..."
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -p "$VM_SSH_PORT" root@localhost << EOF
-echo '$(cat "$VM_SSH_PUBLIC_KEY")' > /home/foreman/.ssh/authorized_keys
-chmod 600 /home/foreman/.ssh/authorized_keys
-chown -R foreman:foreman /home/foreman/.ssh
+echo '$(cat "$VM_SSH_PUBLIC_KEY")' > /home/${VM_USERNAME}/.ssh/authorized_keys
+chmod 600 /home/${VM_USERNAME}/.ssh/authorized_keys
+chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/.ssh
 EOF
 
     # Wait for SSH to be fully ready after sshd restart
@@ -248,7 +248,7 @@ EOF
     done
     
     if [ $ssh_ready -eq 0 ]; then
-        log_error "SSH did not become ready for foreman user in time"
+        log_error "SSH did not become ready for ${VM_USERNAME} user in time"
         exit 1
     fi
     
