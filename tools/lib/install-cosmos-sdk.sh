@@ -5,7 +5,7 @@
 #
 
 install_cosmos_sdk() {
-    log_section "Installing Cosmos SDK and Blockchain Tools"
+    log "Installing Cosmos SDK and Blockchain Tools..."
     
     # Install dependencies
     log_info "Installing build dependencies..."
@@ -64,7 +64,7 @@ EOF"
 }
 
 configure_trustnet_client() {
-    log_section "Configuring TrustNet Blockchain Client"
+    log "Configuring TrustNet Blockchain Client..."
     
     # Create TrustNet configuration
     log_info "Creating TrustNet configuration..."
@@ -145,7 +145,7 @@ EOF"
 }
 
 install_trustnet_web_ui() {
-    log_section "Installing TrustNet Web UI"
+    log "Installing TrustNet Web UI..."
     
     # Create simple web UI directory
     log_info "Creating web UI..."

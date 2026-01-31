@@ -39,8 +39,8 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
     -subj '/CN=${VM_HOSTNAME}' \\
     -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
 
-sudo chown caddy:caddy /etc/caddy/certs/*
-sudo chmod 600 /etc/caddy/certs/*
+sudo chmod 644 /etc/caddy/certs/${VM_HOSTNAME}.crt
+sudo chmod 600 /etc/caddy/certs/${VM_HOSTNAME}.key
 EOF
     
     # Copy Caddyfile
@@ -59,17 +59,8 @@ sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
 
-echo "Starting Caddy service..."
-sudo rc-update add caddy boot
-sudo service caddy start
-
-sleep 2
-
-if sudo service caddy status | grep -q "started"; then
-    echo "✓ Caddy is running with 365-day certificate"
-else
-    echo "⚠ Caddy may not be running properly"
-fi
+echo "✓ Caddy installed and configured"
+echo "Note: Caddy can be started manually with: caddy run --config /etc/caddy/Caddyfile"
 EOF
     
     rm -f /tmp/Caddyfile
