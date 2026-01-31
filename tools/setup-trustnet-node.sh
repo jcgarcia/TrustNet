@@ -401,13 +401,15 @@ main() {
     download_alpine
     
     # Phase 2: Create and configure VM
-    create_vm_disks
-    start_alpine_installer
-    wait_for_alpine_boot
+    create_disks
+    start_vm_for_install
     
-    # Phase 3: Bootstrap Alpine OS
-    bootstrap_alpine_base
-    create_vm_user
+    # (Alpine installer runs automatically here via alpine-install.exp)
+    
+    # Phase 3: Bootstrap Alpine OS (after installation completes)
+    configure_installed_vm
+    setup_cache_disk_in_vm
+    setup_data_disk_in_vm
     configure_ssh
     
     # Phase 4: Install software
