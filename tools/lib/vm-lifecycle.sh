@@ -267,11 +267,7 @@ start_vm_for_install() {
         # Cross-architecture or no KVM - use TCG (software emulation, slow)
         qemu_accel="-accel tcg"
         log_info "  Using TCG emulation ($host_arch host → ${ALPINE_ARCH} guest)"
-        log_info "  Note: Builds will be slower than native ARM64"
-    else
-        # Fallback to TCG for any other scenario
-        qemu_accel="-accel tcg"
-        log_info "  Using TCG emulation"
+        log_info "  Note: Builds will be slower than native"
     fi
     
     log ""
