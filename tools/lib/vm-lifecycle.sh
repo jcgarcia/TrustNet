@@ -240,10 +240,6 @@ find_uefi_vars() {
 start_vm_for_install() {
     log "Starting VM for Alpine installation..."
     
-    # Remove old SSH host key from known_hosts (each new VM has different host keys)
-    log_info "Removing old SSH host key from known_hosts..."
-    ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:${VM_SSH_PORT}" 2>/dev/null || true
-    
     local uefi_fw=$(find_uefi_firmware)
     local iso_path="${VM_DIR}/isos/${ALPINE_ISO}"
     
@@ -321,6 +317,9 @@ start_vm_for_install() {
     
     # Reset terminal to clean state after expect/QEMU
     stty sane 2>/dev/null || true
+    
+    # Remove old SSH host key (each new VM has different host keys)
+    ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:${VM_SSH_PORT}" 2>/dev/null || true
     
     log ""
     log "✓ Alpine installation complete"
