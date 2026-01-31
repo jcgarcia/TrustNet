@@ -45,6 +45,8 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Log file: $LOG_FILE"
 # Trap errors and cleanup
 trap 'echo "[$(date +\"%Y-%m-%d %H:%M:%S\")] ERROR: Installation failed at line $LINENO. Check log: $LOG_FILE" >&2; exit 1' ERR
 
+# Parse command-line arguments
+AUTO_MODE=false
 ALPINE_ARCH="x86_64"  # Default to x86_64 for speed (KVM on Intel/AMD hosts)
 for arg in "$@"; do
     case $arg in
@@ -62,9 +64,7 @@ for arg in "$@"; do
             ;;
         --arch=*)
             echo "Error: Invalid architecture. Use --arch=x86_64 or --arch=aarch64"
-            exit 1)
-            AUTO_MODE=true
-            shift
+            exit 1
             ;;
     esac
 done
