@@ -421,24 +421,26 @@ main() {
     
     # (Alpine installer runs automatically here via alpine-install.exp)
     
-    # Phase 3: Bootstrap Alpine OS (after installation completes)
+    # Phase 3: Generate start script (needed before configure_installed_vm)
+    generate_start_script
+    
+    # Phase 4: Bootstrap Alpine OS (after installation completes)
     configure_installed_vm
     setup_cache_disk_in_vm
     setup_data_disk_in_vm
     configure_ssh
     
-    # Phase 4: Install software
+    # Phase 5: Install software
     install_caddy
     install_blockchain_stack
     
-    # Phase 5: Configure SSL certificates
+    # Phase 6: Configure SSL certificates
     install_certificates
     
-    # Phase 6: Configure MOTD and final touches
+    # Phase 7: Configure MOTD and final touches
     setup_motd
     
-    # Phase 7: Generate helper scripts and save credentials
-    generate_start_script
+    # Phase 8: Configure host SSH and save credentials
     configure_ssh_on_host
     save_credentials
     

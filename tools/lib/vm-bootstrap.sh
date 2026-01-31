@@ -13,11 +13,11 @@ setup_cache_disk_in_vm() {
     
     # Check if cache disk has a filesystem
     if ! ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "sudo blkid /dev/vdb" 2>/dev/null | grep -q "TYPE=\"ext4\""; then
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo blkid /dev/vdb" 2>/dev/null | grep -q "TYPE=\"ext4\""; then
         
         log_info "Cache disk not formatted - creating ext4 filesystem..."
         ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -p "$VM_SSH_PORT" foreman@localhost "sudo mkfs.ext4 -F -L factory-cache /dev/vdb" >/dev/null 2>&1
+            -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo mkfs.ext4 -F -L trustnet-cache /dev/vdb" >/dev/null 2>&1
         
         log_success "Cache disk formatted (ext4)"
     else
@@ -26,50 +26,50 @@ setup_cache_disk_in_vm() {
     
     # Create mount point and mount cache disk
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "sudo mkdir -p /var/cache/factory-build && sudo mount /dev/vdb /var/cache/factory-build && sudo chown -R foreman:foreman /var/cache/factory-build"
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo mkdir -p /var/cache/trustnet-build && sudo mount /dev/vdb /var/cache/trustnet-build && sudo chown -R ${VM_USERNAME}:${VM_USERNAME} /var/cache/trustnet-build"
     
     # Add to fstab for auto-mount on boot
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "grep -q '/dev/vdb' /etc/fstab || echo '/dev/vdb /var/cache/factory-build ext4 defaults 0 2' | sudo tee -a /etc/fstab" >/dev/null
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "grep -q '/dev/vdb' /etc/fstab || echo '/dev/vdb /var/cache/trustnet-build ext4 defaults 0 2' | sudo tee -a /etc/fstab" >/dev/null
     
     log_success "Cache disk mounted at /var/cache/factory-build"
 }
 
 setup_data_disk_in_vm() {
-    log "Setting up data disk (vdc) for Jenkins workspaces..."
+    log "Setting up data disk (vdc) for TrustNet blockchain data..."
     
     # Check if data disk has a filesystem
     if ! ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "sudo blkid /dev/vdc" 2>/dev/null | grep -q "TYPE=\"ext4\""; then
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo blkid /dev/vdc" 2>/dev/null | grep -q "TYPE=\"ext4\""; then
         
         log_info "Data disk not formatted - creating ext4 filesystem..."
         ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -p "$VM_SSH_PORT" foreman@localhost "sudo mkfs.ext4 -F -L factory-data /dev/vdc" >/dev/null 2>&1
+            -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo mkfs.ext4 -F -L trustnet-data /dev/vdc" >/dev/null 2>&1
         
         log_success "Data disk formatted (ext4)"
     else
-        log_info "Data disk already formatted"
+        log_info "Data disk already formatted (reusing preserved blockchain data)"
     fi
     
-    # Create mount point and mount data disk at /var/lib/jenkins
-    # Set ownership to UID 1000:1000 (jenkins user in container)
+    # Create mount point and mount data disk at /var/lib/trustnet
+    # Set ownership to warden user
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "sudo mkdir -p /var/lib/jenkins && sudo mount /dev/vdc /var/lib/jenkins && sudo chown -R 1000:1000 /var/lib/jenkins"
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "sudo mkdir -p /var/lib/trustnet && sudo mount /dev/vdc /var/lib/trustnet && sudo chown -R ${VM_USERNAME}:${VM_USERNAME} /var/lib/trustnet"
     
     # Add to fstab for auto-mount on boot
     ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p "$VM_SSH_PORT" foreman@localhost "grep -q '/dev/vdc' /etc/fstab || echo '/dev/vdc /var/lib/jenkins ext4 defaults 0 2' | sudo tee -a /etc/fstab" >/dev/null
+        -p "$VM_SSH_PORT" ${VM_USERNAME}@localhost "grep -q '/dev/vdc' /etc/fstab || echo '/dev/vdc /var/lib/trustnet ext4 defaults 0 2' | sudo tee -a /etc/fstab" >/dev/null
     
-    log_success "Data disk mounted at /var/lib/jenkins"
+    log_success "Data disk mounted at /var/lib/trustnet"
 }
 
 configure_installed_vm() {
-    log "Configuring installed Factory VM..."
+    log "Configuring installed TrustNet VM..."
     
     # Start VM using the start script
     log_info "Starting VM from installed system..."
-    if ! "${VM_DIR}/start-factory.sh" >/dev/null 2>&1; then
-        log_error "Failed to start Factory VM"
+    if ! "${VM_DIR}/start-trustnet.sh" >/dev/null 2>&1; then
+        log_error "Failed to start TrustNet VM"
         exit 1
     fi
     
@@ -119,17 +119,17 @@ configure_installed_vm() {
         exit 1
     fi
     
-    # Create foreman user
-    log "Creating foreman user with sudo privileges..."
+    # Create ${VM_USERNAME} user
+    log "Creating ${VM_USERNAME} user with sudo privileges..."
     if ! ssh -i "$VM_SSH_PRIVATE_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o ConnectTimeout=60 -o ServerAliveInterval=5 -p "$VM_SSH_PORT" root@localhost << EOF
-# Create foreman user
-adduser -D foreman
-echo "foreman:${FOREMAN_OS_PASSWORD}" | chpasswd
+# Create ${VM_USERNAME} user
+adduser -D ${VM_USERNAME}
+echo "${VM_USERNAME}:${WARDEN_OS_PASSWORD}" | chpasswd
 
 # Add to necessary groups
-addgroup foreman wheel
-addgroup foreman docker
+addgroup ${VM_USERNAME} wheel
+addgroup ${VM_USERNAME} docker
 
 # Configure doas (Alpine's sudo alternative)
 apk add doas
@@ -144,17 +144,17 @@ echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
 
 # Setup SSH directory
-mkdir -p /home/foreman/.ssh
-chmod 700 /home/foreman/.ssh
+mkdir -p /home/${VM_USERNAME}/.ssh
+chmod 700 /home/${VM_USERNAME}/.ssh
 
-# Copy SSH key from root to foreman
-cp /root/.ssh/authorized_keys /home/foreman/.ssh/authorized_keys
-chmod 600 /home/foreman/.ssh/authorized_keys
-chown -R foreman:foreman /home/foreman/.ssh
+# Copy SSH key from root to ${VM_USERNAME}
+cp /root/.ssh/authorized_keys /home/${VM_USERNAME}/.ssh/authorized_keys
+chmod 600 /home/${VM_USERNAME}/.ssh/authorized_keys
+chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/.ssh
 
 # Set bash as default shell
 apk add bash
-sed -i 's|/home/foreman:/bin/ash|/home/foreman:/bin/bash|' /etc/passwd
+sed -i "s|/home/${VM_USERNAME}:/bin/ash|/home/${VM_USERNAME}:/bin/bash|" /etc/passwd
 
 # Install utilities needed for data disk setup and SSH commands
 # - e2fsprogs-extra: provides mkfs.ext4 (for formatting if needed)
