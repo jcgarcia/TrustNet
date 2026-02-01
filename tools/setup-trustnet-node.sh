@@ -267,14 +267,14 @@ sudo \${QEMU_SYSTEM} \\
     -drive file="\${CACHE_DISK}",if=virtio,format=qcow2 \\
     -drive file="\${DATA_DISK}",if=virtio,format=qcow2 \\
     -device virtio-net-pci,netdev=net0 \\
-    -netdev user,id=net0,hostfwd=tcp:127.0.0.1:\${SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:8080-:80,hostfwd=tcp:127.0.0.1:8443-:443 \\
+    -netdev user,id=net0,hostfwd=tcp:127.0.0.1:\${SSH_PORT}-:22,hostfwd=tcp:127.0.0.1:80-:80,hostfwd=tcp:127.0.0.1:443-:443 \\
     -display none \\
     -daemonize \\
     -pidfile "\${PID_FILE}"
 
 echo "✓ TrustNet Node started"
 echo "  SSH: ssh trustnet"
-echo "  Web UI: https://trustnet.local:8443"
+echo "  Web UI: https://trustnet.local"
 EOF
 
     chmod +x "${VM_DIR}/start-trustnet.sh"
