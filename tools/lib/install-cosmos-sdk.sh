@@ -66,6 +66,11 @@ EOF"
 configure_trustnet_client() {
     log "Configuring TrustNet Blockchain Client..."
     
+    # Ensure TrustNet directories exist
+    log_info "Ensuring TrustNet directories exist..."
+    ssh_exec "mkdir -p /home/${VM_USERNAME}/trustnet/{config,data,keys}"
+    ssh_exec "chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet"
+    
     # Create TrustNet configuration
     log_info "Creating TrustNet configuration..."
     
