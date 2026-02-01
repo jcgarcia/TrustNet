@@ -139,11 +139,13 @@ addgroup ${VM_USERNAME} wheel
 addgroup ${VM_USERNAME} docker
 
 # Configure doas (Alpine's sudo alternative)
-apk add doas
+apk add doas sudo
+
+# Configure doas for passwordless operation
 echo "permit nopass :wheel" > /etc/doas.d/doas.conf
 chmod 600 /etc/doas.d/doas.conf
 
-# Configure sudoers for passwordless sudo (Alpine installs real sudo as dependency)
+# Configure sudoers for passwordless sudo
 # Create sudoers.d directory if it doesn't exist
 mkdir -p /etc/sudoers.d
 # Allow wheel group to use sudo without password
