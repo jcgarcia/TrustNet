@@ -63,14 +63,19 @@ sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
 
-echo "✓ Caddy installed and configured"
-echo "Note: Caddy can be started manually with: caddy run --config /etc/caddy/Caddyfile"
+# Enable Caddy to start on boot
+sudo rc-update add caddy default
+
+# Start Caddy service
+sudo rc-service caddy start
+
+echo "✓ Caddy installed, configured, and started"
 EOF
     
     rm -f /tmp/Caddyfile
     
     if [ $? -eq 0 ]; then
-        log_success "✓ Caddy installed and configured with 365-day certificate"
+        log_success "✓ Caddy installed, configured, and started"
     else
         log_error "Caddy installation failed"
         return 1

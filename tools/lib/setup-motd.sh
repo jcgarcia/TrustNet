@@ -21,49 +21,44 @@ setup_motd_via_ssh() {
 cat > /etc/motd << 'MOTD_EOF'
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║              🏭  Factory VM - ARM64 Build Server          ║
+║          🔗  TrustNet Node - Blockchain Platform          ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 
-Welcome to your automated ARM64 build environment!
+Welcome to your TrustNet blockchain node!
 
 📦 Installed Tools:
-  • Docker        - Container runtime (docker command)
-  • Kubernetes    - kubectl & Helm
-  • Terraform     - Infrastructure as Code
-  • AWS CLI       - Cloud management
-  • Jenkins       - CI/CD automation server
-  • Git, Node.js, Python, OpenJDK
+  • Go 1.25.6       - Programming language
+  • Ignite CLI      - Cosmos SDK scaffolding
+  • Git, Make, GCC  - Build tools
+  • Caddy           - HTTPS web server
 
-🌐 Jenkins CI/CD Server:
-  Web UI:    https://factory.local
-  Username:  foreman
-  Password:  (see ~/.factory-vm/credentials.txt on host)
+🌐 TrustNet Services:
+  Web UI:    https://trustnet.local
+  Node RPC:  https://trustnet.local:26657
+  API:       https://trustnet.local:1317
   
-  CLI:       jenkins-factory <command>
-             Available on HOST and inside VM
-             Examples:
-               jenkins-factory who-am-i
-               jenkins-factory list-jobs
-               jenkins-factory build <job-name>
+  SSH Access: ssh trustnet
 
 📁 Storage:
-  System:    /         (50 GB)
-  Data:      /data     (200 GB) - For build artifacts
+  System:    /         (20 GB)
+  Cache:     /var/cache/trustnet-build (5 GB)
+  Data:      /var/lib/trustnet (30 GB) - Blockchain data
 
 🔒 Security:
   • SSH: Key-based authentication only
-  • Jenkins: Secure random password
-  • HTTPS: Certificate installed on host (trusted connection)
+  • HTTPS: Self-signed certificate (365 days)
+  • User: warden (passwordless sudo/doas)
 
-📖 Documentation:
-  Factory README: cat /root/FACTORY-README.md
-  Installation log: cat /root/factory-install.log
+📖 Configuration:
+  Node config:  ~/trustnet/config/config.toml
+  Credentials:  ~/vms/trustnet/credentials.txt (on host)
 
 💡 Quick Start:
-  1. Configure AWS:  awslogin (on host, then SSH forwards)
-  2. Build image:    docker build -t myapp:arm64 .
-  3. Access Jenkins: Open https://factory.local in browser
+  1. Access Web UI: https://trustnet.local
+  2. Check Caddy:   doas rc-service caddy status
+  3. Start Caddy:   doas rc-service caddy start
+  4. View logs:     doas rc-service caddy log
 
 ═══════════════════════════════════════════════════════════════
 MOTD_EOF
