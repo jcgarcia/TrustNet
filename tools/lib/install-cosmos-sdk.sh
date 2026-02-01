@@ -129,8 +129,8 @@ EOF
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o IdentitiesOnly=yes \
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
-        ${VM_USERNAME}@localhost << EOF
-sudo cat > /etc/init.d/trustnet << 'SERVICE_EOF'
+        ${VM_USERNAME}@localhost << 'EOF'
+cat > /tmp/trustnet-service << 'SERVICE_EOF'
 #!/sbin/openrc-run
 
 name=\"TrustNet Node\"
@@ -152,6 +152,7 @@ start_pre() {
 }
 SERVICE_EOF
 
+sudo mv /tmp/trustnet-service /etc/init.d/trustnet
 sudo chmod +x /etc/init.d/trustnet
 sudo rc-update add trustnet default
 EOF
