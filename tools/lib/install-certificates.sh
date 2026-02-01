@@ -157,7 +157,9 @@ install_certificates_on_host() {
         fi
     else
         log_warning "Could not retrieve Caddy CA certificate from VM"
-        log_info "  Caddy may still be generating certificates - try again in a few seconds
+        log_info "  Caddy may still be generating certificates - try again in a few seconds"
+        log_info "  You may see security warnings until certificates are installed"
+    fi
 }
 
 # Export functions
