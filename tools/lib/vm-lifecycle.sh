@@ -303,10 +303,10 @@ start_vm_for_install() {
     local qemu_cmd
     if [ "${ALPINE_ARCH}" = "x86_64" ]; then
         # x86_64: Use KVM acceleration (native), default BIOS, q35 machine
-        qemu_cmd="qemu-system-x86_64 -M q35 $qemu_accel -cpu host -smp $VM_CPUS -m $VM_MEMORY -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22 -nographic"
+        qemu_cmd="qemu-system-x86_64 -M q35 $qemu_accel -cpu host -smp $VM_CPUS -m $VM_MEMORY -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22 -nographic"
     else
         # ARM64: Use TCG emulation (or KVM on ARM hosts), UEFI firmware, virt machine
-        qemu_cmd="qemu-system-aarch64 -M virt $qemu_accel -cpu cortex-a72 -smp $VM_CPUS -m $VM_MEMORY -bios $uefi_fw -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22 -nographic"
+        qemu_cmd="qemu-system-aarch64 -M virt $qemu_accel -cpu cortex-a72 -smp $VM_CPUS -m $VM_MEMORY -bios $uefi_fw -drive file=$SYSTEM_DISK,if=virtio,format=qcow2 -cdrom $iso_path -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22 -nographic"
     fi
     
     # Export variables for expect script
