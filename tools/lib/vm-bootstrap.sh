@@ -138,13 +138,22 @@ echo "${VM_USERNAME}:${WARDEN_OS_PASSWORD}" | chpasswd
 addgroup ${VM_USERNAME} wheel
 addgroup ${VM_USERNAME} docker
 
-# Configure doas (Alpine's sudo alternative)
-apk add doas
+# Enable community repository (required for sudo package)
+echo "http://dl-cdn.alpinelinux.org/alpine/v3.22/community" >> /etc/apk/repositories
+apk update
+
+# Install doas and sudo for flexible privilege escalation
+apk add doas sudo
 
 # Configure doas for passwordless operation
 mkdir -p /etc/doas.d
 echo "permit nopass :wheel" > /etc/doas.d/doas.conf
 chmod 600 /etc/doas.d/doas.conf
+
+# Configure sudo for passwordless operation
+mkdir -p /etc/sudoers.d
+echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
+chmod 440 /etc/sudoers.d/wheel
 
 # Setup SSH directory
 mkdir -p /home/${VM_USERNAME}/.ssh
