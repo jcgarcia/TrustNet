@@ -66,15 +66,18 @@ EOF"
 configure_trustnet_client() {
     log "Configuring TrustNet Blockchain Client..."
     
-    # Ensure TrustNet directories exist
-    log_info "Ensuring TrustNet directories exist..."
-    ssh_exec "mkdir -p /home/${VM_USERNAME}/trustnet/{config,data,keys}"
-    ssh_exec "chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet"
-    
-    # Create TrustNet configuration
+    # Create TrustNet configuration using SSH heredoc (same pattern as install-caddy.sh)
     log_info "Creating TrustNet configuration..."
     
-    ssh_exec "cat > /home/${VM_USERNAME}/trustnet/config/config.toml << 'EOF'
+    ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
+        -o ConnectTimeout=60 -o ServerAliveInterval=30 \
+        ${VM_USERNAME}@localhost << 'TRUSTNET_CONFIG_EOF'
+mkdir -p /home/${VM_USERNAME}/trustnet/config /home/${VM_USERNAME}/trustnet/data /home/${VM_USERNAME}/trustnet/keys
+chown -R ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet
+
+cat > /home/${VM_USERNAME}/trustnet/config/config.toml << 'EOF'
 # TrustNet Node Configuration
 
 [node]
@@ -112,16 +115,22 @@ keyring_dir = "/home/${VM_USERNAME}/trustnet/keys"
 [web]
 # Web UI port (served via Caddy HTTPS)
 port = 8080
-EOF"
-    
-    ssh_exec "chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet/config/config.toml"
+EOF
+
+chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/trustnet/config/config.toml
+TRUSTNET_CONFIG_EOF
     
     log_success "TrustNet configuration created"
     
     # Create TrustNet systemd service
     log_info "Creating TrustNet systemd service..."
     
-    ssh_exec "cat > /etc/init.d/trustnet << 'EOF'
+    ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o IdentitiesOnly=yes \
+        -o ConnectTimeout=60 -o ServerAliveInterval=30 \
+        ${VM_USERNAME}@localhost << 'TRUSTNET_SERVICE_EOF'
+cat > /etc/init.d/trustnet << 'EOF'
 #!/sbin/openrc-run
 
 name=\"TrustNet Node\"
@@ -141,10 +150,11 @@ depend() {
 start_pre() {
     checkpath --directory --owner ${VM_USERNAME}:${VM_USERNAME} --mode 0755 /home/${VM_USERNAME}/trustnet/data
 }
-EOF"
-    
-    ssh_exec "chmod +x /etc/init.d/trustnet"
-    ssh_exec "rc-update add trustnet default"
+EOF
+
+chmod +x /etc/init.d/trustnet
+rc-update add trustnet default
+TRUSTNET_SERVICE_EOF
     
     log_success "TrustNet service configured (will start after blockchain client is built)"
 }
