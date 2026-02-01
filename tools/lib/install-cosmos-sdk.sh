@@ -140,18 +140,18 @@ EOF
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o IdentitiesOnly=yes \
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
-        ${VM_USERNAME}@localhost << 'EOF'
+        ${VM_USERNAME}@localhost << EOF
 cat > /tmp/trustnet-service << 'SERVICE_EOF'
 #!/sbin/openrc-run
 
-name=\"TrustNet Node\"
-description=\"TrustNet Blockchain Client\"
+name="TrustNet Node"
+description="TrustNet Blockchain Client"
 
 command="/home/${VM_USERNAME}/trustnet/bin/trustnetd"
 command_args="start --home /home/${VM_USERNAME}/trustnet"
 command_user="${VM_USERNAME}:${VM_USERNAME}"
-command_background=\"yes\"
-pidfile=\"/run/trustnet.pid\"
+command_background="yes"
+pidfile="/run/trustnet.pid"
 
 depend() {
     need net
@@ -186,10 +186,10 @@ doas chown warden:warden /var/www/trustnet
 # Create HTML file in /tmp first, then move
 cat > /tmp/index.html << 'HTML_EOF'
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrustNet Node</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -243,58 +243,58 @@ cat > /tmp/index.html << 'HTML_EOF'
     </style>
 </head>
 <body>
-    <div class=\"container\">
+    <div class="container">
         <h1>🔗 TrustNet Node</h1>
-        <p class=\"subtitle\">Decentralized Trust Network - Web3 Identity & Reputation</p>
+        <p class="subtitle">Decentralized Trust Network - Web3 Identity & Reputation</p>
         
-        <div class=\"status\">
+        <div class="status">
             <h2>Node Status</h2>
-            <div class=\"status-item\">
+            <div class="status-item">
                 <span>Blockchain Network:</span>
-                <span class=\"status-value\" id=\"network\">TrustNet Hub</span>
+                <span class="status-value" id="network">TrustNet Hub</span>
             </div>
-            <div class=\"status-item\">
+            <div class="status-item">
                 <span>Connection Status:</span>
-                <span class=\"status-value\" id=\"connection\">Connecting...</span>
+                <span class="status-value" id="connection">Connecting...</span>
             </div>
-            <div class=\"status-item\">
+            <div class="status-item">
                 <span>Identity:</span>
-                <span class=\"status-value\" id=\"identity\">Not registered</span>
+                <span class="status-value" id="identity">Not registered</span>
             </div>
-            <div class=\"status-item\">
+            <div class="status-item">
                 <span>Reputation:</span>
-                <span class=\"status-value\" id=\"reputation\">-</span>
+                <span class="status-value" id="reputation">-</span>
             </div>
-            <div class=\"status-item\">
+            <div class="status-item">
                 <span>TRUST Balance:</span>
-                <span class=\"status-value\" id=\"balance\">0 TRUST</span>
+                <span class="status-value" id="balance">0 TRUST</span>
             </div>
         </div>
         
-        <div style=\"text-align: center; margin-top: 30px;\">
-            <button class=\"button\" onclick=\"registerIdentity()\">Register Identity</button>
-            <button class=\"button\" onclick=\"viewTransactions()\">View Transactions</button>
-            <button class=\"button\" onclick=\"manageKeys()\">Manage Keys</button>
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="button" onclick="registerIdentity()">Register Identity</button>
+            <button class="button" onclick="viewTransactions()">View Transactions</button>
+            <button class="button" onclick="manageKeys()">Manage Keys</button>
         </div>
         
-        <div style=\"margin-top: 30px; text-align: center; opacity: 0.7; font-size: 0.9em;\">
+        <div style="margin-top: 30px; text-align: center; opacity: 0.7; font-size: 0.9em;">
             <p>TrustNet Node v1.0.0 | Cosmos SDK | Tendermint BFT</p>
-            <p style=\"margin-top: 5px;\">Served via Caddy HTTPS with Let's Encrypt</p>
+            <p style="margin-top: 5px;">Served via Caddy HTTPS with Let's Encrypt</p>
         </div>
     </div>
     
     <script>
         // Placeholder functions (will connect to blockchain RPC)
         function registerIdentity() {
-            alert('Identity registration coming soon!\\nThis will create a cryptographic keypair and register on TrustNet Hub.');
+            alert('Identity registration coming soon!\nThis will create a cryptographic keypair and register on TrustNet Hub.');
         }
         
         function viewTransactions() {
-            alert('Transaction history coming soon!\\nThis will query the blockchain for your transaction history.');
+            alert('Transaction history coming soon!\nThis will query the blockchain for your transaction history.');
         }
         
         function manageKeys() {
-            alert('Key management coming soon!\\nThis will allow you to backup/restore your identity keys.');
+            alert('Key management coming soon!\nThis will allow you to backup/restore your identity keys.');
         }
         
         // Simulate connection status update

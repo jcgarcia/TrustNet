@@ -75,6 +75,22 @@ main() {
     log_success "Bootstrap configuration saved"
     
     echo ""
+    log_header "Multicast Broadcasting"
+    broadcast_multicast "fd10:1234::253" 8053
+    log_info "Registry will announce itself on IPv6 multicast ff02::1"
+    log_info "Nodes on the same network will auto-discover this registry"
+    
+    echo ""
+    log_header "Optional: Distribute Across Internet"
+    log_info "To allow nodes on different networks to join:"
+    log_info ""
+    log_info "1. Add AAAA record to your domain DNS:"
+    log_info "   tnr.yourdomain.com AAAA fd10:1234::253"
+    log_info ""
+    log_info "2. Nodes will fall back to DNS if multicast unavailable"
+    log_info "3. This is OPTIONAL - multicast discovery works on local network"
+    
+    echo ""
     log_info "Next: Create first node via setup-node.sh"
     echo ""
 }

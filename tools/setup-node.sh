@@ -3,7 +3,8 @@
 # TrustNet: Create Node + Internal Registry VM
 # Creates node-N with internal registry at fd10:1234::10N
 #
-# Usage: setup-node.sh [--node-name NAME] [--region REGION] [--city CITY] [--auto|-y]
+# Usage: setup-node.sh [--node-name NAME] [--region REGION] [--city CITY] [--discovery MODE] [--peer ADDR] [--auto|-y]
+# Discovery modes: hybrid (default), multicast-only, dns-only, static-only
 #
 
 set -euo pipefail
@@ -23,6 +24,8 @@ CONFIG_DIR="${HOME}/.trustnet"
 NODE_NAME=""
 REGION=""
 CITY=""
+DISCOVERY_MODE="hybrid"  # Default: hybrid discovery
+STATIC_PEER=""           # For --peer argument
 AUTO_MODE=false
 
 # Parse arguments
@@ -34,6 +37,10 @@ for arg in "$@"; do
         --region) shift; REGION="$1" ;;
         --city=*) CITY="${arg#*=}" ;;
         --city) shift; CITY="$1" ;;
+        --discovery=*) DISCOVERY_MODE="${arg#*=}" ;;
+        --discovery) shift; DISCOVERY_MODE="$1" ;;
+        --peer=*) STATIC_PEER="${arg#*=}" ;;
+        --peer) shift; STATIC_PEER="$1" ;;
         --auto|-y) AUTO_MODE=true ;;
     esac
 done
@@ -219,6 +226,33 @@ main() {
     
     # Create VM
     create_node_vm
+    
+    echo ""
+    log_header "Discovery Configuration"
+    log_info "Node will use $DISCOVERY_MODE discovery"
+    
+    case "$DISCOVERY_MODE" in
+        hybrid)
+            log_info "  1. Listen for multicast on ff02::1 (local networks)"
+            log_info "  2. Fall back to DNS TNR query (internet networks)"
+            log_info "  3. Fall back to --peer static address (if provided)"
+            ;;
+        multicast-only)
+            log_info "  Listening for IPv6 multicast ff02::1"
+            log_info "  Note: Only works on local network segment"
+            ;;
+        dns-only)
+            log_info "  Querying DNS for TNR record"
+            log_info "  Note: Requires DNS configuration in your domain"
+            ;;
+        static-only)
+            if [[ -n "$STATIC_PEER" ]]; then
+                log_info "  Connecting to static peer: $STATIC_PEER"
+            else
+                log_warn "Static-only mode requires --peer argument!"
+            fi
+            ;;
+    esac
     
     echo ""
     log_success "Node configuration ready: $NODE_NAME"

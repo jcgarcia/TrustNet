@@ -134,15 +134,31 @@ copy_files() {
     # Tools directory
     if [[ -d "$WORKING_REPO/tools" ]]; then
         mkdir -p "$PUBLIC_REPO/tools"
+        mkdir -p "$PUBLIC_REPO/tools/lib"
         
-        # Copy Phase scripts
-        for script in phase2-qemu-setup.sh phase3-alpine-install.sh phase4-deploy-cache.sh; do
-            if [[ -f "$WORKING_REPO/tools/$script" ]]; then
-                cp "$WORKING_REPO/tools/$script" "$PUBLIC_REPO/tools/"
-                chmod +x "$PUBLIC_REPO/tools/$script"
-                log_info "Copied: tools/$script"
-            fi
-        done
+        # Copy main setup script
+        if [[ -f "$WORKING_REPO/tools/setup-trustnet-node.sh" ]]; then
+            cp "$WORKING_REPO/tools/setup-trustnet-node.sh" "$PUBLIC_REPO/tools/"
+            chmod +x "$PUBLIC_REPO/tools/setup-trustnet-node.sh"
+            log_info "Copied: tools/setup-trustnet-node.sh"
+        fi
+        
+        # Copy Alpine installer
+        if [[ -f "$WORKING_REPO/tools/alpine-install.exp" ]]; then
+            cp "$WORKING_REPO/tools/alpine-install.exp" "$PUBLIC_REPO/tools/"
+            log_info "Copied: tools/alpine-install.exp"
+        fi
+        
+        # Copy all lib modules
+        if [[ -d "$WORKING_REPO/tools/lib" ]]; then
+            for module in "$WORKING_REPO/tools/lib"/*.sh; do
+                if [[ -f "$module" ]]; then
+                    cp "$module" "$PUBLIC_REPO/tools/lib/"
+                    chmod +x "$PUBLIC_REPO/tools/lib/$(basename "$module")"
+                    log_info "Copied: tools/lib/$(basename "$module")"
+                fi
+            done
+        fi
     fi
     
     # Public docs only (exclude internal work docs)

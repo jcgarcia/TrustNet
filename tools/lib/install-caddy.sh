@@ -11,10 +11,11 @@ fi
 install_caddy_via_ssh() {
     log_info "Installing Caddy reverse proxy via SSH..."
     
-    # Create Caddyfile content - uses explicit cert files (not tls internal which expires in 12h)
+    # Create Caddyfile content - serves static HTML from /var/www/trustnet
     cat > /tmp/Caddyfile << CADDY_EOF
 ${VM_HOSTNAME} {
-    reverse_proxy localhost:8080
+    root * /var/www/trustnet
+    file_server
     tls /etc/caddy/certs/${VM_HOSTNAME}.crt /etc/caddy/certs/${VM_HOSTNAME}.key
 }
 CADDY_EOF
@@ -43,8 +44,10 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
     -subj '/CN=${VM_HOSTNAME}' \\
     -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
 
+# Set ownership to caddy user for permission access
+sudo chown -R caddy:caddy /etc/caddy/certs
 sudo chmod 644 /etc/caddy/certs/${VM_HOSTNAME}.crt
-sudo chmod 600 /etc/caddy/certs/${VM_HOSTNAME}.key
+sudo chmod 640 /etc/caddy/certs/${VM_HOSTNAME}.key
 EOF
     
     # Copy Caddyfile
