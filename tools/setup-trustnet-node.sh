@@ -267,7 +267,7 @@ sudo \${QEMU_SYSTEM} \\
     -drive file="\${CACHE_DISK}",if=virtio,format=qcow2 \\
     -drive file="\${DATA_DISK}",if=virtio,format=qcow2 \\
     -device virtio-net-pci,netdev=net0 \\
-    -netdev user,id=net0,hostfwd=tcp:127.0.0.1:\${SSH_PORT}-:22,hostfwd=tcp::80-:80,hostfwd=tcp::443-:443 \\
+    -netdev user,id=net0,hostfwd=tcp::\${SSH_PORT}-:22,hostfwd=tcp::80-:80,hostfwd=tcp::443-:443 \\
     -display none \\
     -daemonize \\
     -pidfile "\${PID_FILE}"
