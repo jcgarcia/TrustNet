@@ -163,9 +163,10 @@ EOF
 install_trustnet_web_ui() {
     log "Installing TrustNet Web UI..."
     
-    # Create simple web UI directory
+    # Create simple web UI directory with sudo
     log_info "Creating web UI..."
-    ssh_exec "mkdir -p /var/www/trustnet"
+    ssh_exec "sudo mkdir -p /var/www/trustnet"
+    ssh_exec "sudo chown warden:warden /var/www/trustnet"
     
     # Create basic HTML dashboard
     ssh_exec "cat > /var/www/trustnet/index.html << 'EOF'
