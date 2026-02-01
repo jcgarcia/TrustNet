@@ -130,7 +130,7 @@ EOF
         -o IdentitiesOnly=yes \
         -o ConnectTimeout=60 -o ServerAliveInterval=30 \
         ${VM_USERNAME}@localhost << EOF
-cat > /etc/init.d/trustnet << 'SERVICE_EOF'
+sudo cat > /etc/init.d/trustnet << 'SERVICE_EOF'
 #!/sbin/openrc-run
 
 name=\"TrustNet Node\"
@@ -152,8 +152,8 @@ start_pre() {
 }
 SERVICE_EOF
 
-chmod +x /etc/init.d/trustnet
-rc-update add trustnet default
+sudo chmod +x /etc/init.d/trustnet
+sudo rc-update add trustnet default
 EOF
     
     log_success "TrustNet service configured (will start after blockchain client is built)"
