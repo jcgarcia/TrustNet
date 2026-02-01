@@ -43,7 +43,18 @@ EOF"
     
     # Install Ignite CLI (Cosmos SDK scaffolding tool)
     log_info "Installing Ignite CLI..."
-    ssh_exec "source /home/${VM_USERNAME}/.profile && curl -fsSL https://get.ignite.com/cli | bash"
+    
+    # Check cache first, download if not present
+    ssh_exec "if [ ! -f /var/cache/trustnet-build/ignite ]; then \
+        cd /var/cache/trustnet-build && \
+        curl -fsSL https://get.ignite.com/cli! -o ignite && \
+        chmod +x ignite; \
+    fi"
+    
+    # Copy from cache to user directory
+    ssh_exec "cp /var/cache/trustnet-build/ignite /home/${VM_USERNAME}/ignite && \
+        chmod +x /home/${VM_USERNAME}/ignite && \
+        chown ${VM_USERNAME}:${VM_USERNAME} /home/${VM_USERNAME}/ignite"
     
     log_success "Ignite CLI installed"
     
