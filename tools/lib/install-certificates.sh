@@ -100,7 +100,7 @@ install_certificates_on_host() {
                     for cert_dir in $(find "$config_dir" -type d \( -name "Default" -o -name "Profile *" \) 2>/dev/null); do
                         if [ -f "$cert_dir/Cookies" ] || [ -f "$cert_dir/History" ]; then
                             remove_old_trustnet_certs "sql:$cert_dir"
-                            if certutil -A -d sql:$cert_dir -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                            if certutil -A -d sql:$cert_dir -t "CT,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
                                 browsers_updated=$((browsers_updated + 1))
                             fi
                         fi
@@ -111,7 +111,7 @@ install_certificates_on_host() {
             # Install to system NSS database (used by Chromium browsers as fallback)
             if [ -d ~/.pki/nssdb ]; then
                 remove_old_trustnet_certs "sql:$HOME/.pki/nssdb"
-                if certutil -A -d sql:$HOME/.pki/nssdb -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                if certutil -A -d sql:$HOME/.pki/nssdb -t "CT,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
                     browsers_updated=$((browsers_updated + 1))
                 fi
             fi
@@ -127,7 +127,7 @@ install_certificates_on_host() {
                     for cert_dir in "$firefox_base"/*.default* "$firefox_base"/*[Pp]rofile*; do
                         if [ -f "$cert_dir/cert9.db" ] || [ -f "$cert_dir/cert8.db" ]; then
                             remove_old_trustnet_certs "sql:$cert_dir"
-                            if certutil -A -d sql:$cert_dir -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                            if certutil -A -d sql:$cert_dir -t "CT,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
                                 browsers_updated=$((browsers_updated + 1))
                             fi
                         fi
