@@ -16,7 +16,7 @@ install_caddy_via_ssh() {
 ${VM_HOSTNAME} {
     root * /var/www/trustnet
     file_server
-    tls /etc/caddy/certs/${VM_HOSTNAME}.crt /etc/caddy/certs/${VM_HOSTNAME}.key
+    tls internal
 }
 CADDY_EOF
     
@@ -33,21 +33,10 @@ sudo apk update
 echo "Installing Caddy..."
 sudo apk add caddy
 
-echo "Creating Caddy configuration and certificate directories..."
+echo "Creating Caddy configuration directory..."
 sudo mkdir -p /etc/caddy
-sudo mkdir -p /etc/caddy/certs
 
-echo "Generating 365-day self-signed certificate for ${VM_HOSTNAME}..."
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
-    -keyout /etc/caddy/certs/${VM_HOSTNAME}.key \\
-    -out /etc/caddy/certs/${VM_HOSTNAME}.crt \\
-    -subj '/CN=${VM_HOSTNAME}' \\
-    -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
-
-# Set ownership to caddy user for permission access
-sudo chown -R caddy:caddy /etc/caddy/certs
-sudo chmod 644 /etc/caddy/certs/${VM_HOSTNAME}.crt
-sudo chmod 640 /etc/caddy/certs/${VM_HOSTNAME}.key
+# Caddy will auto-generate internal CA and certificates with 'tls internal' directive
 EOF
     
     # Copy Caddyfile
@@ -71,6 +60,9 @@ sudo rc-update add caddy default
 
 # Start Caddy service
 sudo rc-service caddy start
+
+# Wait for Caddy to generate its internal CA (happens on first start)
+sleep 3
 
 echo "✓ Caddy installed, configured, and started"
 EOF
