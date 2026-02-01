@@ -129,11 +129,20 @@ download_alpine() {
     # Check cache first (in repository directory)
     local cached_iso="${CACHE_DIR}/alpine/${ALPINE_ISO}"
     if [ -f "$cached_iso" ]; then
-        log_info "  Using cached Alpine ISO: ${ALPINE_ISO}"
-        mkdir -p "${VM_DIR}/isos"
-        cp "$cached_iso" "${VM_DIR}/isos/${ALPINE_ISO}"
-        log "  ✓ ISO copied from cache"
-        return 0
+        # Validate cached ISO (must be at least 50MB, full ISO is ~60-70MB)
+        local filesize=$(stat -f%z "$cached_iso" 2>/dev/null || stat -c%s "$cached_iso" 2>/dev/null || echo "0")
+        local min_size=$((50 * 1024 * 1024))  # 50MB minimum
+        
+        if [ "$filesize" -lt "$min_size" ]; then
+            log_warning "  Cached ISO is corrupted (${filesize} bytes < 50MB), re-downloading..."
+            rm -f "$cached_iso"
+        else
+            log_info "  Using cached Alpine ISO: ${ALPINE_ISO}"
+            mkdir -p "${VM_DIR}/isos"
+            cp "$cached_iso" "${VM_DIR}/isos/${ALPINE_ISO}"
+            log "  ✓ ISO copied from cache"
+            return 0
+        fi
     fi
     
     # Download to cache, then copy to VM directory
