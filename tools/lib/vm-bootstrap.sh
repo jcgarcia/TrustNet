@@ -139,21 +139,28 @@ addgroup ${VM_USERNAME} wheel
 addgroup ${VM_USERNAME} docker
 
 # Enable community repository (required for sudo package)
-echo "http://dl-cdn.alpinelinux.org/alpine/v3.22/community" >> /etc/apk/repositories
-apk update
+if ! grep -q "community" /etc/apk/repositories; then
+    echo "http://dl-cdn.alpinelinux.org/alpine/v3.22/community" >> /etc/apk/repositories
+fi
+apk update >/dev/null 2>&1
 
 # Install doas and sudo for flexible privilege escalation
-apk add doas sudo
+apk add doas >/dev/null 2>&1
+apk add sudo >/dev/null 2>&1
 
-# Configure doas for passwordless operation
-mkdir -p /etc/doas.d
-echo "permit nopass :wheel" > /etc/doas.d/doas.conf
-chmod 600 /etc/doas.d/doas.conf
+# Configure doas for passwordless operation (if installed)
+if command -v doas >/dev/null 2>&1; then
+    mkdir -p /etc/doas.d
+    echo "permit nopass :wheel" > /etc/doas.d/doas.conf
+    chmod 600 /etc/doas.d/doas.conf
+fi
 
-# Configure sudo for passwordless operation
-mkdir -p /etc/sudoers.d
-echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
-chmod 440 /etc/sudoers.d/wheel
+# Configure sudo for passwordless operation (if installed)
+if command -v sudo >/dev/null 2>&1; then
+    mkdir -p /etc/sudoers.d
+    echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
+    chmod 440 /etc/sudoers.d/wheel
+fi
 
 # Setup SSH directory
 mkdir -p /home/${VM_USERNAME}/.ssh
