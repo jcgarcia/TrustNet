@@ -295,9 +295,9 @@ cat > /tmp/index.html << 'HTML_EOF'
 </body>
 </html>
 HTML_EOF
-# Move to final location and set ownership
+# Move to final location and set readable permissions
 mv /tmp/index.html /var/www/trustnet/index.html
-chown caddy:caddy /var/www/trustnet/index.html
+chmod 644 /var/www/trustnet/index.html
 EOF
     
     log_success "Web UI installed at /var/www/trustnet"
