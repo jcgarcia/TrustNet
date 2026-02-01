@@ -449,7 +449,6 @@ main() {
     
     # Pre-flight checks
     check_dependencies
-    check_port_conflicts
     offer_configuration_choice
     
     # Generate secure passwords

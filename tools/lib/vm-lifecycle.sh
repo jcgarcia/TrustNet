@@ -28,42 +28,12 @@ ensure_qemu() {
     fi
 }
 
-check_port_conflicts() {
-    log "Checking for port conflicts..."
-    
-    local conflicts=()
-    local ports_to_check="80 443 ${VM_SSH_PORT}"
-    
-    for port in $ports_to_check; do
-        if sudo lsof -i :$port &>/dev/null; then
-            local process=$(sudo lsof -t -i :$port | head -1)
-            local cmd=$(ps -p $process -o comm= 2>/dev/null || echo "unknown")
-            conflicts+=("Port $port (used by $cmd)")
-        fi
-    done
-    
-    if [ ${#conflicts[@]} -gt 0 ]; then
-        log_error "Port conflicts detected:"
-        for conflict in "${conflicts[@]}"; do
-            log_error "  - $conflict"
-        done
-        log_info ""
-        log_info "Solutions:"
-        log_info "  1. Stop conflicting services (e.g., sudo systemctl stop apache2)"
-        log_info "  2. Or configure TrustNet to use different ports"
-        log_info ""
-        exit 1
-    fi
-    
-    log "  ✓ No port conflicts"
-}
-
 check_dependencies() {
     log "Checking dependencies..."
     
     local missing=()
     
-    for cmd in curl sshpass ssh-keygen expect nc lsof; do
+    for cmd in curl sshpass ssh-keygen expect nc; do
         if ! command -v $cmd &> /dev/null; then
             missing+=($cmd)
         fi
@@ -189,25 +159,32 @@ download_alpine() {
 create_disks() {
     log "Creating VM disks..."
     
-    # Check for corrupted/incomplete system disk
+    # Check if system disk exists and has data
     if [ -f "$SYSTEM_DISK" ]; then
-        # Check if disk is bootable (has been fully installed)
-        local disk_size=$(qemu-img info "$SYSTEM_DISK" 2>/dev/null | grep "virtual size" | awk '{print $3}' | tr -d 'G')
         local disk_actual=$(qemu-img info "$SYSTEM_DISK" 2>/dev/null | grep "disk size" | awk '{print $3}' | tr -d 'GMK')
         
-        # If disk exists but has less than 100MB actual data, it's likely corrupted/incomplete
-        if [ -n "$disk_actual" ] && [ "${disk_actual%%.*}" -lt "100" ]; then
-            log_warning "Detected incomplete/corrupted system disk (${disk_actual}), deleting..."
+        # If disk has > 100MB, it likely has an installation
+        if [ -n "$disk_actual" ] && [ "${disk_actual%%.*}" -gt "100" ]; then
+            log_warning "Existing TrustNet installation found (${disk_actual} data)"
+            log_info ""
+            read -p "Delete and create fresh install? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_error "Installation cancelled by user"
+                log_info "To keep existing installation, use the start script: ~/vms/trustnet/start-trustnet.sh"
+                exit 1
+            fi
+            log_info "Removing old system disk for fresh installation..."
+            rm -f "$SYSTEM_DISK"
+        else
+            # Small or corrupted disk, just delete it
+            log_info "Removing incomplete system disk..."
             rm -f "$SYSTEM_DISK"
         fi
     fi
     
-    if [ ! -f "$SYSTEM_DISK" ]; then
-        qemu-img create -f qcow2 "$SYSTEM_DISK" "$SYSTEM_DISK_SIZE"
-        log "  ✓ System disk created (${SYSTEM_DISK_SIZE})"
-    else
-        log "  ✓ System disk exists"
-    fi
+    qemu-img create -f qcow2 "$SYSTEM_DISK" "$SYSTEM_DISK_SIZE"
+    log "  ✓ System disk created (${SYSTEM_DISK_SIZE})"
     
     # Check for preserved cache disk from previous test
     local cache_disk_backup="${HOME}/.factory-vm/cache-backup.qcow2"
