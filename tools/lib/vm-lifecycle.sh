@@ -28,12 +28,42 @@ ensure_qemu() {
     fi
 }
 
+check_port_conflicts() {
+    log "Checking for port conflicts..."
+    
+    local conflicts=()
+    local ports_to_check="80 443 ${VM_SSH_PORT}"
+    
+    for port in $ports_to_check; do
+        if sudo lsof -i :$port &>/dev/null; then
+            local process=$(sudo lsof -t -i :$port | head -1)
+            local cmd=$(ps -p $process -o comm= 2>/dev/null || echo "unknown")
+            conflicts+=("Port $port (used by $cmd)")
+        fi
+    done
+    
+    if [ ${#conflicts[@]} -gt 0 ]; then
+        log_error "Port conflicts detected:"
+        for conflict in "${conflicts[@]}"; do
+            log_error "  - $conflict"
+        done
+        log_info ""
+        log_info "Solutions:"
+        log_info "  1. Stop conflicting services (e.g., sudo systemctl stop apache2)"
+        log_info "  2. Or configure TrustNet to use different ports"
+        log_info ""
+        exit 1
+    fi
+    
+    log "  ✓ No port conflicts"
+}
+
 check_dependencies() {
     log "Checking dependencies..."
     
     local missing=()
     
-    for cmd in curl sshpass ssh-keygen expect nc; do
+    for cmd in curl sshpass ssh-keygen expect nc lsof; do
         if ! command -v $cmd &> /dev/null; then
             missing+=($cmd)
         fi
@@ -129,11 +159,20 @@ download_alpine() {
     # Check cache first (in repository directory)
     local cached_iso="${CACHE_DIR}/alpine/${ALPINE_ISO}"
     if [ -f "$cached_iso" ]; then
-        log_info "  Using cached Alpine ISO: ${ALPINE_ISO}"
-        mkdir -p "${VM_DIR}/isos"
-        cp "$cached_iso" "${VM_DIR}/isos/${ALPINE_ISO}"
-        log "  ✓ ISO copied from cache"
-        return 0
+        # Validate cached ISO (must be at least 50MB, full ISO is ~60-70MB)
+        local filesize=$(stat -f%z "$cached_iso" 2>/dev/null || stat -c%s "$cached_iso" 2>/dev/null || echo "0")
+        local min_size=$((50 * 1024 * 1024))  # 50MB minimum
+        
+        if [ "$filesize" -lt "$min_size" ]; then
+            log_warning "  Cached ISO is corrupted (${filesize} bytes < 50MB), re-downloading..."
+            rm -f "$cached_iso"
+        else
+            log_info "  Using cached Alpine ISO: ${ALPINE_ISO}"
+            mkdir -p "${VM_DIR}/isos"
+            cp "$cached_iso" "${VM_DIR}/isos/${ALPINE_ISO}"
+            log "  ✓ ISO copied from cache"
+            return 0
+        fi
     fi
     
     # Download to cache, then copy to VM directory
@@ -149,6 +188,19 @@ download_alpine() {
 
 create_disks() {
     log "Creating VM disks..."
+    
+    # Check for corrupted/incomplete system disk
+    if [ -f "$SYSTEM_DISK" ]; then
+        # Check if disk is bootable (has been fully installed)
+        local disk_size=$(qemu-img info "$SYSTEM_DISK" 2>/dev/null | grep "virtual size" | awk '{print $3}' | tr -d 'G')
+        local disk_actual=$(qemu-img info "$SYSTEM_DISK" 2>/dev/null | grep "disk size" | awk '{print $3}' | tr -d 'GMK')
+        
+        # If disk exists but has less than 100MB actual data, it's likely corrupted/incomplete
+        if [ -n "$disk_actual" ] && [ "${disk_actual%%.*}" -lt "100" ]; then
+            log_warning "Detected incomplete/corrupted system disk (${disk_actual}), deleting..."
+            rm -f "$SYSTEM_DISK"
+        fi
+    fi
     
     if [ ! -f "$SYSTEM_DISK" ]; then
         qemu-img create -f qcow2 "$SYSTEM_DISK" "$SYSTEM_DISK_SIZE"
