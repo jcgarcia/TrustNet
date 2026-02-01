@@ -24,7 +24,7 @@ install_certificates_on_host() {
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o ConnectTimeout=10 \
         ${VM_USERNAME}@localhost \
-        "doas cat /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt" > "$cert_file" 2>/dev/null; then
+        "doas cat /root/.local/share/caddy/pki/authorities/local/root.crt" > "$cert_file" 2>/dev/null; then
         
         log_success "  ✓ Caddy root CA certificate retrieved from VM"
         
