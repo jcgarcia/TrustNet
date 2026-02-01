@@ -163,13 +163,17 @@ EOF
 install_trustnet_web_ui() {
     log "Installing TrustNet Web UI..."
     
-    # Create simple web UI directory with sudo
+    # Create simple web UI directory and HTML file via SSH heredoc
     log_info "Creating web UI..."
-    ssh_exec "sudo mkdir -p /var/www/trustnet"
-    ssh_exec "sudo chown warden:warden /var/www/trustnet"
-    
-    # Create basic HTML dashboard
-    ssh_exec "cat > /var/www/trustnet/index.html << 'EOF'
+    ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
+        -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        "${VM_USERNAME}@localhost" << 'EOF'
+# Create directory with sudo
+sudo mkdir -p /var/www/trustnet
+sudo chown warden:warden /var/www/trustnet
+
+# Create HTML file in /tmp first, then move
+cat > /tmp/index.html << 'HTML_EOF'
 <!DOCTYPE html>
 <html lang=\"en\">
 <head>
@@ -290,9 +294,11 @@ install_trustnet_web_ui() {
     </script>
 </body>
 </html>
-EOF"
-    
-    ssh_exec "chown -R caddy:caddy /var/www/trustnet"
+HTML_EOF
+# Move to final location and set ownership
+mv /tmp/index.html /var/www/trustnet/index.html
+chown caddy:caddy /var/www/trustnet/index.html
+EOF
     
     log_success "Web UI installed at /var/www/trustnet"
 }
