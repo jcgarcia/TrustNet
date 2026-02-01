@@ -307,7 +307,7 @@ EOF
 }
 
 configure_ssh_on_host() {
-    log_section "Configuring SSH on Host"
+    log "Configuring SSH on Host"
     
     local ssh_config="${HOME}/.ssh/config"
     
@@ -345,7 +345,7 @@ EOF
 }
 
 save_credentials() {
-    log_section "Saving Credentials"
+    log "Saving Credentials"
     
     cat > "${VM_DIR}/credentials.txt" << EOF
 ╔══════════════════════════════════════════════════════════════════════╗
