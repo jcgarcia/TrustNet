@@ -305,10 +305,10 @@ start_vm_for_install() {
     export VM_SSH_PUBLIC_KEY_CONTENT="$(cat "$VM_SSH_PUBLIC_KEY")"
     export QEMU_COMMAND="$qemu_cmd"
     
-    # Run automated installation using external expect script (in parent tools/ directory)
+    # Run automated installation using external expect script (in PROJECT_ROOT directory)
     # Filter output to remove terminal escape sequences that can corrupt the terminal
     # The ^[[...R sequences are cursor position responses from the VM's terminal
-    if ! expect "$(dirname "$SCRIPT_DIR")/alpine-install.exp" 2>&1 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/;[0-9]*R//g'; then
+    if ! expect "$PROJECT_ROOT/alpine-install.exp" 2>&1 | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/;[0-9]*R//g'; then
         # Reset terminal in case expect left it in a bad state
         stty sane 2>/dev/null || true
         log_error "Alpine installation failed"
