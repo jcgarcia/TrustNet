@@ -11,12 +11,12 @@ fi
 install_caddy_via_ssh() {
     log_info "Installing Caddy reverse proxy via SSH..."
     
-    # Create Caddyfile content - serves static HTML from /var/www/trustnet
+    # Create Caddyfile content - uses Caddy's automatic HTTPS with internal CA
     cat > /tmp/Caddyfile << CADDY_EOF
 ${VM_HOSTNAME} {
     root * /var/www/trustnet
     file_server
-    tls /etc/caddy/certs/${VM_HOSTNAME}.crt /etc/caddy/certs/${VM_HOSTNAME}.key
+    tls internal
 }
 CADDY_EOF
     
@@ -33,21 +33,12 @@ sudo apk update
 echo "Installing Caddy..."
 sudo apk add caddy
 
-echo "Creating Caddy configuration and certificate directories..."
+echo "Creating Caddy configuration directory..."
 sudo mkdir -p /etc/caddy
-sudo mkdir -p /etc/caddy/certs
+sudo mkdir -p /var/lib/caddy/.local/share/caddy
 
-echo "Generating 365-day self-signed certificate for ${VM_HOSTNAME}..."
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
-    -keyout /etc/caddy/certs/${VM_HOSTNAME}.key \\
-    -out /etc/caddy/certs/${VM_HOSTNAME}.crt \\
-    -subj '/CN=${VM_HOSTNAME}' \\
-    -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
-
-# Set ownership to caddy user for permission access
-sudo chown -R caddy:caddy /etc/caddy/certs
-sudo chmod 644 /etc/caddy/certs/${VM_HOSTNAME}.crt
-sudo chmod 640 /etc/caddy/certs/${VM_HOSTNAME}.key
+# Caddy will auto-generate internal CA and certificates
+# No need for manual openssl certificate generation
 EOF
     
     # Copy Caddyfile

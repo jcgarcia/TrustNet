@@ -1,7 +1,7 @@
 #!/bin/bash
-# install-certificates.sh - Install TrustNet SSL certificate on host system
+# install-certificates.sh - Install TrustNet Caddy CA certificate on host system
 # Adapted from FactoryVM install-certificates.sh
-# Updated Feb 1, 2026: Use 365-day self-signed cert for TrustNet VM
+# Updated Feb 1, 2026: Use Caddy's automatic CA instead of self-signed certificates
 
 # Prevent direct execution
 if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
@@ -10,35 +10,35 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
 fi
 
 install_certificates_on_host() {
-    log "Installing TrustNet SSL certificate on host system..."
+    log "Installing TrustNet Caddy CA certificate on host system..."
     
-    local cert_file="${VM_DIR}/trustnet-ssl.crt"
+    local cert_file="${VM_DIR}/trustnet-caddy-ca.crt"
     local cert_installed=false
     
-    # Wait a moment for Caddy to be ready
-    sleep 2
+    # Wait for Caddy to generate its internal CA (takes a few seconds)
+    sleep 3
     
-    # Retrieve SSL certificate from VM (365-day self-signed cert)
-    log_info "  Retrieving SSL certificate from VM..."
+    # Retrieve Caddy's root CA certificate from VM
+    log_info "  Retrieving Caddy root CA certificate from VM..."
     if ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o ConnectTimeout=10 \
         ${VM_USERNAME}@localhost \
-        "doas cat /etc/caddy/certs/${VM_HOSTNAME}.crt" > "$cert_file" 2>/dev/null; then
+        "doas cat /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt" > "$cert_file" 2>/dev/null; then
         
-        log_success "  ✓ SSL certificate retrieved from VM (365-day validity)"
+        log_success "  ✓ Caddy root CA certificate retrieved from VM"
         
         # Install to system trust store (REQUIRED for curl/wget to trust HTTPS)
         log_info "    Removing old TrustNet certificates from system trust store..."
         sudo rm -f /usr/local/share/ca-certificates/trustnet*.crt 2>/dev/null || true
         sudo update-ca-certificates --fresh >/dev/null 2>&1 || true
         
-        if sudo cp "$cert_file" /usr/local/share/ca-certificates/trustnet-ssl.crt 2>/dev/null; then
-            log_info "    Installing to system trust store..."
+        if sudo cp "$cert_file" /usr/local/share/ca-certificates/trustnet-caddy-ca.crt 2>/dev/null; then
+            log_info "    Installing Caddy CA to system trust store..."
             sudo update-ca-certificates >/dev/null 2>&1
             
-            if [ -f /usr/local/share/ca-certificates/trustnet-ssl.crt ]; then
-                log_success "  ✓ Certificate installed to system trust store"
+            if [ -f /usr/local/share/ca-certificates/trustnet-caddy-ca.crt ]; then
+                log_success "  ✓ Caddy CA certificate installed to system trust store"
                 cert_installed=true
             fi
         else
@@ -77,15 +77,13 @@ install_certificates_on_host() {
             # Helper function to remove old TrustNet certificates
             remove_old_trustnet_certs() {
                 local db_path="$1"
+                # Remove old server certs
                 for i in {1..5}; do
                     certutil -D -d "$db_path" -n "TrustNet SSL" >/dev/null 2>&1 || break
                 done
-                # Also remove old Caddy certs from previous installs
+                # Remove old Caddy CA certs from previous installs
                 for i in {1..5}; do
-                    certutil -D -d "$db_path" -n "Caddy Local CA - TrustNet" >/dev/null 2>&1 || break
-                done
-                for i in {1..5}; do
-                    certutil -D -d "$db_path" -n "Caddy Intermediate CA - TrustNet" >/dev/null 2>&1 || break
+                    certutil -D -d "$db_path" -n "Caddy Local CA" >/dev/null 2>&1 || break
                 done
             }
             
@@ -102,7 +100,7 @@ install_certificates_on_host() {
                     for cert_dir in $(find "$config_dir" -type d \( -name "Default" -o -name "Profile *" \) 2>/dev/null); do
                         if [ -f "$cert_dir/Cookies" ] || [ -f "$cert_dir/History" ]; then
                             remove_old_trustnet_certs "sql:$cert_dir"
-                            if certutil -A -d sql:$cert_dir -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                            if certutil -A -d sql:$cert_dir -t "TC,," -n "Caddy Local CA" -i "$cert_file" >/dev/null 2>&1; then
                                 browsers_updated=$((browsers_updated + 1))
                             fi
                         fi
@@ -113,7 +111,7 @@ install_certificates_on_host() {
             # Install to system NSS database (used by Chromium browsers as fallback)
             if [ -d ~/.pki/nssdb ]; then
                 remove_old_trustnet_certs "sql:$HOME/.pki/nssdb"
-                if certutil -A -d sql:$HOME/.pki/nssdb -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                if certutil -A -d sql:$HOME/.pki/nssdb -t "TC,," -n "Caddy Local CA" -i "$cert_file" >/dev/null 2>&1; then
                     browsers_updated=$((browsers_updated + 1))
                 fi
             fi
@@ -129,7 +127,7 @@ install_certificates_on_host() {
                     for cert_dir in "$firefox_base"/*.default* "$firefox_base"/*[Pp]rofile*; do
                         if [ -f "$cert_dir/cert9.db" ] || [ -f "$cert_dir/cert8.db" ]; then
                             remove_old_trustnet_certs "sql:$cert_dir"
-                            if certutil -A -d sql:$cert_dir -t "C,C,C" -n "TrustNet SSL" -i "$cert_file" >/dev/null 2>&1; then
+                            if certutil -A -d sql:$cert_dir -t "TC,," -n "Caddy Local CA" -i "$cert_file" >/dev/null 2>&1; then
                                 browsers_updated=$((browsers_updated + 1))
                             fi
                         fi
@@ -140,6 +138,8 @@ install_certificates_on_host() {
             if [ $browsers_updated -gt 0 ]; then
                 log_success "  ✓ Certificate installed to $browsers_updated browser profile(s)"
                 log_info "    Supported browsers: Chrome, Chromium, Brave, Edge, Firefox"
+                log_info "    Restaddy CA installed to $browsers_updated browser profile(s)"
+                log_info "    Supported browsers: Chrome, Chromium, Brave, Edge, Firefox"
                 log_info "    Restart browsers to apply changes"
             else
                 log_info "  No browser profiles found"
@@ -149,16 +149,15 @@ install_certificates_on_host() {
         fi
         
         if [ "$cert_installed" = "true" ]; then
-            log_success "✓ Certificates installed successfully"
+            log_success "✓ Caddy CA certificates installed successfully"
             log_info "  https://${VM_HOSTNAME} is now trusted"
-            log_info "  Certificate valid for 365 days"
+            log_info "  Caddy will auto-renew certificates"
         else
             log_warning "Certificate installation had issues"
         fi
     else
-        log_warning "Could not retrieve SSL certificate from VM"
-        log_info "  You may see security warnings until certificates are installed"
-    fi
+        log_warning "Could not retrieve Caddy CA certificate from VM"
+        log_info "  Caddy may still be generating certificates - try again in a few seconds
 }
 
 # Export functions
