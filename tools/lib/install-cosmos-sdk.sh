@@ -168,9 +168,9 @@ install_trustnet_web_ui() {
     ssh -i "$VM_SSH_PRIVATE_KEY" -p "$VM_SSH_PORT" \
         -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${VM_USERNAME}@localhost" << 'EOF'
-# Create directory with sudo
-sudo mkdir -p /var/www/trustnet
-sudo chown warden:warden /var/www/trustnet
+# Create directory with doas (Alpine's privilege escalation)
+doas mkdir -p /var/www/trustnet
+doas chown warden:warden /var/www/trustnet
 
 # Create HTML file in /tmp first, then move
 cat > /tmp/index.html << 'HTML_EOF'
