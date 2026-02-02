@@ -46,6 +46,18 @@ log ""
 mkdir -p "$REPO_DIR"
 cd "$REPO_DIR"
 
+log "Cloning TrustNet repository..."
+# Clone or update repository
+if [[ -d ".git" ]]; then
+    log "Repository exists, updating..."
+    git fetch origin
+    git checkout "$BRANCH"
+    git pull origin "$BRANCH"
+else
+    log "Cloning repository..."
+    git clone -b "$BRANCH" "$REPO_URL" .
+fi
+
 # Check for existing data at correct location (~/.trustnet/)
 DATA_PRESERVED=0
 PERSISTENT_DATA_DIR="${HOME}/.trustnet/data"
@@ -61,11 +73,11 @@ if [ -d "$IDENTITY_BACKUP" ]; then
     log "  Your identity will be restored during installation"
 fi
 
-# Download latest scripts (always get fresh version)
-log "→ Downloading latest scripts..."
+# Download latest scripts (always get fresh version from core)
+log "→ Downloading latest core scripts..."
 
-# Download setup script
-if ! curl -fsSL "$RAW_URL/$BRANCH/tools/setup-trustnet-node.sh?nocache=$(date +%s)" -o setup-trustnet-node.sh.tmp; then
+# Download setup script from core directory
+if ! curl -fsSL "$RAW_URL/$BRANCH/core/tools/setup-trustnet-node.sh?nocache=$(date +%s)" -o setup-trustnet-node.sh.tmp; then
     log_error "Failed to download setup script"
     exit 1
 fi
@@ -73,19 +85,19 @@ mv setup-trustnet-node.sh.tmp setup-trustnet-node.sh
 chmod +x setup-trustnet-node.sh
 sed -i 's/\r$//' setup-trustnet-node.sh 2>/dev/null || dos2unix setup-trustnet-node.sh 2>/dev/null || true
 
-# Download alpine-install.exp
-if ! curl -fsSL "$RAW_URL/$BRANCH/tools/alpine-install.exp?nocache=$(date +%s)" -o alpine-install.exp.tmp; then
+# Download alpine-install.exp from core
+if ! curl -fsSL "$RAW_URL/$BRANCH/core/tools/alpine-install.exp?nocache=$(date +%s)" -o alpine-install.exp.tmp; then
     log_error "Failed to download alpine-install.exp"
     exit 1
 fi
 mv alpine-install.exp.tmp alpine-install.exp
 sed -i 's/\r$//' alpine-install.exp 2>/dev/null || dos2unix alpine-install.exp 2>/dev/null || true
 
-# Download modules
-log "→ Downloading modules..."
+# Download core modules
+log "→ Downloading core modules..."
 mkdir -p lib
 
-# List of modules to download
+# List of core modules to download
 MODULES=(
     "common.sh"
     "cache-manager.sh"
@@ -98,15 +110,15 @@ MODULES=(
 )
 
 for module in "${MODULES[@]}"; do
-    if ! curl -fsSL "$RAW_URL/$BRANCH/tools/lib/$module?nocache=$(date +%s)" -o "lib/$module.tmp"; then
-        log_error "Failed to download module: $module"
+    if ! curl -fsSL "$RAW_URL/$BRANCH/core/tools/lib/$module?nocache=$(date +%s)" -o "lib/$module.tmp"; then
+        log_error "Failed to download core module: $module"
         exit 1
     fi
     mv "lib/$module.tmp" "lib/$module"
     chmod +x "lib/$module"
 done
 
-log "✓ Scripts and modules downloaded"
+log "✓ Core scripts and modules downloaded"
 
 # Notify about data preservation
 if [ $DATA_PRESERVED -eq 1 ]; then

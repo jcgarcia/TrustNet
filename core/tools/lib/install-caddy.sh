@@ -38,14 +38,16 @@ sudo mkdir -p /etc/caddy
 sudo mkdir -p /etc/caddy/certs
 
 echo "Generating 365-day self-signed certificate for ${VM_HOSTNAME}..."
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/caddy/certs/${VM_HOSTNAME}.key \
-    -out /etc/caddy/certs/${VM_HOSTNAME}.crt \
-    -subj '/CN=${VM_HOSTNAME}' \
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
+    -keyout /etc/caddy/certs/${VM_HOSTNAME}.key \\
+    -out /etc/caddy/certs/${VM_HOSTNAME}.crt \\
+    -subj '/CN=${VM_HOSTNAME}' \\
     -addext 'subjectAltName=DNS:${VM_HOSTNAME}'
 
-sudo chown caddy:caddy /etc/caddy/certs/*
-sudo chmod 600 /etc/caddy/certs/*
+# Set ownership to caddy user for permission access
+sudo chown -R caddy:caddy /etc/caddy/certs
+sudo chmod 644 /etc/caddy/certs/${VM_HOSTNAME}.crt
+sudo chmod 640 /etc/caddy/certs/${VM_HOSTNAME}.key
 EOF
     
     # Copy Caddyfile
@@ -70,16 +72,13 @@ sudo rc-update add caddy default
 # Start Caddy service
 sudo rc-service caddy start
 
-# Wait for Caddy to generate its internal CA (happens on first start)
-sleep 3
-
 echo "✓ Caddy installed, configured, and started"
 EOF
     
     rm -f /tmp/Caddyfile
     
     if [ $? -eq 0 ]; then
-        log_success "✓ Caddy installed and configured with 365-day certificate"
+        log_success "✓ Caddy installed, configured, and started"
     else
         log_error "Caddy installation failed"
         return 1

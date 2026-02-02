@@ -1,8 +1,27 @@
 # TrustNet
 
-Distributed blockchain infrastructure with Tendermint consensus and container registry. Production-ready setup with Alpine Linux 3.22.2 ARM64, IPv6 ULA networking, and automated QEMU virtualization.
+**Decentralized Trust Network** - Web3 Identity & Reputation
+
+Blockchain-based trust network with modular architecture, hot-swappable features, and production-ready VM infrastructure.
 
 ## 🚀 Quick Start
+
+### One-Liner Installation
+
+Install a TrustNet node with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jcgarcia/TrustNet/main/install.sh | bash
+```
+
+This will:
+- ✅ Download and setup Alpine Linux VM
+- ✅ Configure Caddy web server with SSL
+- ✅ Deploy TrustNet core infrastructure
+- ✅ Setup blockchain node (Cosmos SDK + Tendermint)
+- ✅ Generate startup scripts in ~/vms/trustnet/
+
+Installation takes approximately **10-15 minutes** depending on system speed and network.
 
 ### Prerequisites
 
@@ -11,43 +30,50 @@ The installer needs QEMU:
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get update
-sudo apt-get install -y qemu-system-arm qemu-efi-aarch64 qemu-utils
+sudo apt-get install -y qemu-system-x86_64 qemu-utils
 ```
 
 **RHEL/Rocky/AlmaLinux:**
 ```bash
-sudo dnf install -y qemu-system-aarch64 qemu-efi-aarch64 qemu-img
+sudo dnf install -y qemu-system-x86_64 qemu-img
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S qemu-system-aarch64 edk2-armvirt
+sudo pacman -S qemu-system-x86
 ```
 
-### One-Liner Installation
+## 📁 Project Structure
 
-Install with a single command:
+TrustNet uses a **modular architecture** that separates core infrastructure from features:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/jcgarcia/TrustNet/main/install.sh | bash
+```
+TrustNet/
+├── core/              # VM infrastructure (rarely changes)
+│   ├── tools/        # Installation scripts
+│   └── docs/         # Core documentation
+│
+├── modules/           # Feature modules (hot-swappable)
+│   ├── web-ui/       # Main web dashboard
+│   ├── identity/     # Identity registration
+│   ├── transactions/ # Transaction viewer
+│   ├── keys/         # Key management
+│   └── blockchain/   # Node integration
+│
+├── api/              # Backend REST API
+│   └── src/          # API services
+│
+└── docs/             # Documentation
 ```
 
-This will:
-- ✅ Download and cache Alpine Linux 3.22.2 ARM64 ISO
-- ✅ Create QEMU virtual machines (trustnet-node: 50GB, trustnet-registry: 30GB)
-- ✅ Configure IPv6 ULA networking (fd10:1234::/32)
-- ✅ Deploy Tendermint consensus validator
-- ✅ Setup container image registry with HTTP API
-- ✅ Generate VM startup scripts in ~/vms/
+### Why Modular?
 
-Installation takes approximately **20-30 minutes** depending on system speed and network.
+- **Fast Development**: Edit code on host → auto-sync to VM → see changes instantly
+- **No VM Rebuilds**: Add/remove features without touching core infrastructure
+- **Safe**: Core VM protected in separate git branch
+- **Scalable**: Each module is independent with its own frontend/API
 
-**Or manually:**
-```bash
-git clone https://github.com/jcgarcia/TrustNet.git
-cd TrustNet
-bash tools/setup-vms.sh --auto
-```
+See [MODULAR_DEVELOPMENT_PLAN.md](docs/MODULAR_DEVELOPMENT_PLAN.md) for architecture details.
 
 ## What is TrustNet?
 

@@ -216,15 +216,9 @@ if [ -f "\$PID_FILE" ] && sudo kill -0 \$(cat "\$PID_FILE") 2>/dev/null; then
     exit 0
 fi
 
-# Create virtual IPv6 address ::3 for TrustNet (to avoid port 443 conflict with other VMs)
-if ! ip addr show lo | grep -q "inet6 ::3"; then
-    sudo ip addr add ::3/128 dev lo
-    echo "  ✓ Created virtual IPv6 ::3 for TrustNet"
-fi
-
-# Add /etc/hosts entry for trustnet.local (IPv6 ::3 to avoid conflict with Factory VM)
+# Add /etc/hosts entry for trustnet.local
 if ! grep -q "trustnet.local" /etc/hosts 2>/dev/null; then
-    echo "::3 trustnet.local" | sudo tee -a /etc/hosts > /dev/null
+    echo "127.0.0.1 trustnet.local" | sudo tee -a /etc/hosts > /dev/null
 fi
 
 echo -e "\${GREEN}Starting TrustNet Node...\${NC}"
@@ -273,7 +267,7 @@ sudo \${QEMU_SYSTEM} \\
     -drive file="\${CACHE_DISK}",if=virtio,format=qcow2 \\
     -drive file="\${DATA_DISK}",if=virtio,format=qcow2 \\
     -device virtio-net-pci,netdev=net0 \\
-    -netdev user,id=net0,hostfwd=tcp::\${SSH_PORT}-:22,hostfwd=tcp::8443-:443 \\
+    -netdev user,id=net0,hostfwd=tcp::\${SSH_PORT}-:22,hostfwd=tcp::443-:443 \\
     -display none \\
     -daemonize \\
     -pidfile "\${PID_FILE}"
